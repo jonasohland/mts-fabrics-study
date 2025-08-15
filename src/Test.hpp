@@ -4,6 +4,7 @@
 #include <string>
 #include <mxl/flow.h>
 #include <mxl/mxl.h>
+#include "FlowSetup.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -19,6 +20,7 @@ namespace riedel::fabricsperf
         virtual void timerStop() = 0;
         virtual void setLocalTargetInfo(std::string info) = 0;
         virtual bool interrupted() const = 0;
+        virtual FlowSetup& flows() = 0;
     };
 
     class Test
@@ -26,7 +28,7 @@ namespace riedel::fabricsperf
     public:
         virtual ~Test() = default;
 
-        virtual void setup(TestContext& ctx, mxlFlowReader* reader, mxlFlowWriter* writer) = 0;
+        virtual void setup(TestContext& ctx) = 0;
         virtual void teardown(TestContext& ctx) = 0;
         virtual void run(TestContext& ctx) = 0;
         virtual void onRemoteEndpointAvailable(TestContext& ctx, std::string info) = 0;

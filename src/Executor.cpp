@@ -1,6 +1,5 @@
 #include "Executor.hpp"
 #include <exception>
-#include "internal/Logging.hpp"
 #include "Reflector.hpp"
 #include "Runner.hpp"
 
@@ -33,14 +32,22 @@ namespace riedel::fabricsperf
 
     void Executor::runner()
     {
-        Runner runner{_config};
-        runner.run();
+        _inner = std::make_unique<Runner>(_config);
+        _inner->run();
     }
 
     void Executor::reflector()
     {
-        MXL_INFO("Running reflector mode");
-        Reflector reflector{_config, _factories};
-        reflector.run();
+        _inner = std::make_unique<Reflector>(_config, _factories);
+        _inner->run();
     }
+
+    void Executor::stop()
+    {
+        if (_inner)
+        {
+            _inner->stop();
+        }
+    }
+
 }

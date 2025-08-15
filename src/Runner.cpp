@@ -8,4 +8,7 @@ namespace riedel::fabricsperf
 
     void Runner::run()
     {}
+
+    void Runner::stop()
+    {}
 }

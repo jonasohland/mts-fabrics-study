@@ -6,6 +6,13 @@
 
 namespace fp = riedel::fabricsperf;
 
+std::function<void()>* stopHandler;
+
+void signal_handler(int)
+{
+    (*stopHandler)();
+}
+
 int main(int argc, char** argv)
 {
     CLI::App app{};
@@ -41,11 +48,18 @@ int main(int argc, char** argv)
 
     CLI11_PARSE(app, argc, argv);
 
+    std::signal(SIGINT, signal_handler);
+
     try
     {
         fp::Executor runner{std::move(config)};
 
         runner.add<fp::MXLHost2Host>();
+
+        stopHandler = new std::function<void()>{
+            [&]() { runner.stop(); },
+        };
+
         runner.run();
     }
     catch (std::exception& ex)

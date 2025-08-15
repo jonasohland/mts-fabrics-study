@@ -21,6 +21,7 @@ add_executable(
     "src/main.cpp"
     "src/Config.cpp"
     "src/Test.cpp"
+    "src/FlowSetup.cpp"
     "src/Executor.cpp"
     "src/Reflector.cpp"
     "src/Runner.cpp"
@@ -31,6 +32,7 @@ target_link_libraries(
     fabrics-perf
     PRIVATE
     mxl-static
+    mxl-fabrics-static
     httplib::httplib
     CLI11::CLI11
 )

@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <fmt/format.h>
+#include "internal/Logging.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -64,7 +65,11 @@ namespace riedel::fabricsperf
 
             ss << fs.rdbuf();
 
-            return ss.str();
+            auto str = ss.str();
+
+            MXL_INFO("nmos flow def length: {}", str);
+
+            return str;
         }
         catch (std::exception& ex)
         {

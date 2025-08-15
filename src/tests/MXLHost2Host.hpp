@@ -1,3 +1,4 @@
+#include <mxl/fabrics.h>
 #include "../Test.hpp"
 
 namespace riedel::fabricsperf
@@ -16,9 +17,13 @@ namespace riedel::fabricsperf
     public:
         using Factory = MXLHost2HostFactory;
 
-        virtual void setup(mxlFlowReader* reader, mxlFlowWriter* writer);
-        virtual void teardown();
-        virtual void run(TestContext& ctx);
-        virtual void onRemoteEndpointAvailable(std::string info);
+        virtual void setup(TestContext&);
+        virtual void teardown(TestContext&);
+        virtual void run(TestContext&);
+        virtual void onRemoteEndpointAvailable(TestContext&, std::string);
+
+        mxlFabricsInstance _instance;
+        mxlFabricsInitiator _in;
+        mxlFabricsTarget _tg;
     };
 }

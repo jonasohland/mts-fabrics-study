@@ -17,19 +17,21 @@ namespace riedel::fabricsperf
     class FlowSetup
     {
     public:
-        FlowSetup(std::string const& domain, std::string flowInfo);
+        FlowSetup(std::string const& domain, std::string flowConfig);
         ~FlowSetup();
 
-        MxlRegions getRegions();
+        void destroy();
+
+        MxlRegions getWriterRegions();
+        MxlRegions getReaderRegions();
+        mxlInstance instance();
 
     private:
         mxlInstance _mxl{nullptr};
         mxlFlowReader _fr{nullptr};
         mxlFlowWriter _fw{nullptr};
 
-        FlowInfo _frInfo{};
-        FlowInfo _fwInfo{};
-
-        std::string _flowInfo;
+        FlowInfo _flowInfo{};
+        std::string _flowConfig;
     };
 }
