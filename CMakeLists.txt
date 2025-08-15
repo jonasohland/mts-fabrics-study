@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
+
+# Allow version in project definition
+cmake_policy(SET CMP0048 NEW)
+# Only interpret if arguments as variables or keywords when unquoted.
+cmake_policy(SET CMP0054 NEW)
+# Allow visibility definitions
+cmake_policy(SET CMP0063 NEW)
+# Interpret target_sources paths as relative to the current source dir
+cmake_policy(SET CMP0076 NEW)
+# Set the timestamps of all extracted contents to the time of the extraction
+cmake_policy(SET CMP0135 NEW)
+
+add_subdirectory(mxl)
+
+find_package(httplib CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
+
+add_executable(
+    fabrics-perf
+    "src/main.cpp"
+    "src/Config.cpp"
+    "src/Test.cpp"
+    "src/Executor.cpp"
+    "src/Reflector.cpp"
+    "src/Runner.cpp"
+    "src/tests/MXLHost2Host.cpp"
+)
+
+target_link_libraries(
+    fabrics-perf
+    PRIVATE
+    mxl-static
+    httplib::httplib
+    CLI11::CLI11
+)
+
+target_include_directories(
+    fabrics-perf
+    PRIVATE
+    "mxl/lib/src"
+)
