@@ -9,7 +9,8 @@
             "name": "stduuid",
             "version>=": "1.2.3",
             "features": [
-                "gsl-span"
+                "gsl-span",
+		"system-gen"
             ]
         },
         {
