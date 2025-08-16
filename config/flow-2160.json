@@ -1,6 +1,6 @@
 {
     "description": "MXL Test File",
-    "id": "5fbec3b1-1b0f-417d-9059-8b94a4719700",
+    "id": "5fbec3b1-1b0f-417d-9059-8b94a47197e0",
     "tags": {},
     "format": "urn:x-nmos:format:video",
     "label": "MXL Test File",
@@ -10,26 +10,26 @@
         "numerator": 25,
         "denominator": 1
     },
-    "frame_width": 1280,
-    "frame_height": 720,
+    "frame_width": 3840,
+    "frame_height": 2160,
     "colorspace": "BT709",
     "components": [
         {
             "name": "Y",
-            "width": 1280,
-            "height": 720,
+            "width": 3840,
+            "height": 2160,
             "bit_depth": 10
         },
         {
             "name": "Cb",
-            "width": 640,
-            "height": 720,
+            "width": 1920,
+            "height": 2160,
             "bit_depth": 10
         },
         {
             "name": "Cr",
-            "width": 640,
-            "height": 720,
+            "width": 1920,
+            "height": 2160,
             "bit_depth": 10
         }
     ]
