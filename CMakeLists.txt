@@ -11,7 +11,13 @@ cmake_policy(SET CMP0076 NEW)
 # Set the timestamps of all extracted contents to the time of the extraction
 cmake_policy(SET CMP0135 NEW)
 
+find_package(PkgConfig)
+
+pkg_check_modules(uuid REQUIRED IMPORTED_TARGET uuid)
+add_library(unofficial::UUID::uuid ALIAS PkgConfig::uuid)
+
 add_subdirectory(mxl)
+
 
 find_package(httplib CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
