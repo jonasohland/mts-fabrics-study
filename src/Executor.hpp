@@ -36,9 +36,9 @@ namespace riedel::fabricsperf
         void runner();
         void reflector();
 
+        std::atomic_bool _stopped;
         Config _config;
         std::unordered_map<std::string, std::unique_ptr<TestFactory>> _factories;
-
         std::unique_ptr<Inner> _inner;
     };
 } // namespace riedel::fabricsperf

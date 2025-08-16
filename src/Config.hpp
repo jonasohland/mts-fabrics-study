@@ -16,9 +16,9 @@ namespace riedel::fabricsperf
         bool reflector;
         std::string listen;
         std::string connect;
-        std::string test;
-        std::string node;
-        std::string service;
+        std::string run;
+        std::string targetEndpoint;
+        std::string initiatorEndpoint;
         std::string output;
         std::string gpu;
         std::string domain;
@@ -28,6 +28,11 @@ namespace riedel::fabricsperf
         int listenPort() const;
         std::string listenHost() const;
         std::string flowConfig() const;
+
+        std::string targetEndpointNode() const;
+        std::string targetEndpointService() const;
+        std::string initiatorEndpointNode() const;
+        std::string initiatorEndpointService() const;
     };
 
 }

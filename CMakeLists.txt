@@ -15,6 +15,7 @@ add_subdirectory(mxl)
 
 find_package(httplib CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
+find_package(stduuid CONFIG REQUIRED)
 
 add_executable(
     fabrics-perf
@@ -35,6 +36,7 @@ target_link_libraries(
     mxl-fabrics-static
     httplib::httplib
     CLI11::CLI11
+    stduuid
 )
 
 target_include_directories(

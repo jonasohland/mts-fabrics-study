@@ -32,9 +32,11 @@ namespace riedel::fabricsperf
         void setLocalTargetInfo(std::string info) override;
         bool interrupted() const override;
         FlowSetup& flows() override;
+        Config const& config() const override;
 
     private:
-        void terminateTest();
+        void resetTest();
+        void reset();
         void initTest(std::string testName);
         void initFlow(std::string flowDef);
 
@@ -48,6 +50,7 @@ namespace riedel::fabricsperf
         std::optional<std::string> _remoteTargetInfo{std::nullopt};
         std::optional<std::thread> _testThread{std::nullopt};
         std::optional<FlowSetup> _flowSetup{std::nullopt};
+
         std::atomic_bool _interrupted{false};
 
         Config const& _config;

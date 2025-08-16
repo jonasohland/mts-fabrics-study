@@ -65,11 +65,7 @@ namespace riedel::fabricsperf
 
             ss << fs.rdbuf();
 
-            auto str = ss.str();
-
-            MXL_INFO("nmos flow def length: {}", str);
-
-            return str;
+            return ss.str();
         }
         catch (std::exception& ex)
         {
@@ -77,6 +73,26 @@ namespace riedel::fabricsperf
         }
 
         throw std::runtime_error(fmt::format("unknown error reading: {}", flow));
+    }
+
+    std::string Config::targetEndpointNode() const
+    {
+        return targetEndpoint.substr(0, targetEndpoint.find(':'));
+    }
+
+    std::string Config::targetEndpointService() const
+    {
+        return targetEndpoint.substr(targetEndpoint.find(':') + 1, targetEndpoint.size());
+    }
+
+    std::string Config::initiatorEndpointNode() const
+    {
+        return initiatorEndpoint.substr(0, targetEndpoint.find(':'));
+    }
+
+    std::string Config::initiatorEndpointService() const
+    {
+        return initiatorEndpoint.substr(initiatorEndpoint.find(':') + 1, initiatorEndpoint.size());
     }
 
 }

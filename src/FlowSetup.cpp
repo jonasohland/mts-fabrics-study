@@ -126,4 +126,9 @@ namespace riedel::fabricsperf
 
         return MxlRegions{regions, RegionsDeleter{}};
     }
+
+    mxlInstance FlowSetup::instance()
+    {
+        return _mxl;
+    }
 }

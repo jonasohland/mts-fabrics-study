@@ -1,5 +1,6 @@
 #include "Reflector.hpp"
 #include <uuid.h>
+#include "internal/Logging.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -24,9 +25,15 @@ namespace riedel::fabricsperf
             [this](http::Request const&, http::Response& res)
             { res.set_content(getLocalTargetInfo(), "application/json"); });
 
+        MXL_INFO(
+            "Starting reflector server on {}:{} ...", _config.listenHost(), _config.listenPort());
+
+        // will block until interrupted by Reflector::stop()
         _srv.listen(_config.listenHost(), _config.listenPort());
 
-        terminateTest();
+        resetTest();
+
+        MXL_INFO("Reflector server shut down");
     }
 
     void Reflector::stop()
@@ -38,8 +45,12 @@ namespace riedel::fabricsperf
     {
         std::unique_lock _l{_m};
 
-        _remoteTargetInfo.emplace(std::move(info));
-        _c.notify_all();
+        if (!_test)
+        {
+            throw std::runtime_error("no test active");
+        }
+
+        _test->onRemoteEndpointAvailable(*this, std::move(info));
     }
 
     std::string Reflector::getLocalTargetInfo()
@@ -58,7 +69,7 @@ namespace riedel::fabricsperf
                 return *_localTargetInfo;
             }
 
-            _c.wait(l, [this]() { return !_test && _localTargetInfo; });
+            _c.wait(l);
         }
     }
 
@@ -82,13 +93,7 @@ namespace riedel::fabricsperf
     {
         std::unique_lock _l{_m};
 
-        if (!_test)
-        {
-            throw std::runtime_error("no test is running");
-        }
-
         _localTargetInfo = info;
-        _c.notify_all();
     }
 
     bool Reflector::interrupted() const
@@ -106,32 +111,54 @@ namespace riedel::fabricsperf
         return *_flowSetup;
     }
 
+    Config const& Reflector::config() const
+    {
+        return _config;
+    }
+
     void Reflector::initTest(std::string testName)
     {
-        std::unique_lock _l{_m};
-        terminateTest();
-
-        if (testName != "")
+        std::unique_ptr<Test> test;
         {
-            // call test factory for new test
-            _test = (*_factories.at(testName))();
+            std::unique_lock _l{_m};
 
-            _testThread.emplace(std::bind(&Reflector::runTest, this));
+            resetTest();
+
+            if (testName != "")
+            {
+                // call test factory for new test
+                test = (*_factories.at(testName))();
+            }
+
+            _c.notify_all();
         }
 
-        _c.notify_all();
+        test->setup(*this);
+
+        {
+            std::unique_lock _l{_m};
+
+            _test = std::move(test);
+            _interrupted.store(false, std::memory_order_relaxed);
+            _testThread.emplace([this]() { this->runTest(); });
+            _c.notify_all();
+        }
     }
 
     void Reflector::initFlow(std::string flowDef)
     {
         std::unique_lock _l{_m};
-        terminateTest();
+
+        // resets everything
+        reset();
 
         _flowSetup.emplace(_config.domain, flowDef);
     }
 
-    void Reflector::terminateTest()
+    void Reflector::resetTest()
     {
+        MXL_INFO("Resetting reflector implementation");
+
         // reset target infos
         _localTargetInfo.reset();
         _remoteTargetInfo.reset();
@@ -144,14 +171,14 @@ namespace riedel::fabricsperf
         {
             _testThread->join();
             _testThread.reset();
-        }
 
-        // call the test teardown function
-        if (_test)
-        {
             _test->teardown(*this);
-            _test.reset();
         }
+    }
+
+    void Reflector::reset()
+    {
+        resetTest();
 
         if (_flowSetup)
         {
@@ -162,9 +189,13 @@ namespace riedel::fabricsperf
 
     void Reflector::runTest()
     {
-        if (_test)
+        try
         {
             _test->run(*this);
+        }
+        catch (std::exception& ex)
+        {
+            MXL_ERROR("Failed to run reflector implementation for test: {}", ex.what());
         }
     }
 }

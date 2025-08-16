@@ -22,9 +22,9 @@ int main(int argc, char** argv)
         .reflector = false,
         .listen = "",
         .connect = "",
-        .test = "all",
-        .node = "",
-        .service = "",
+        .run = "all",
+        .targetEndpoint = "127.0.0.1:9992",
+        .initiatorEndpoint = "127.0.0.1:9993",
         .output = "output.csv",
         .gpu = "0",
         .domain = "/dev/shm/mxl",
@@ -33,12 +33,12 @@ int main(int argc, char** argv)
 
     app.add_flag("--runner", config.runner, "Run as the test runner");
     app.add_flag("--reflector", config.reflector, "Run as the reflector instance");
-    app.add_option("-n, --node", config.node, "Local fabric node address");
-    app.add_option("-s, --service", config.service, "Local fabric service");
+    app.add_option("-t, --target", config.targetEndpoint, "Local fabric node address");
+    app.add_option("-i, --initiator", config.initiatorEndpoint, "Local fabric service");
     app.add_option("-o, --output", config.output, "Path at which the report should be written");
     app.add_option("-g, --gpu", config.gpu, "Id of the gpu that should be used");
-    app.add_option("-t, --test",
-        config.test,
+    app.add_option("-r, --run",
+        config.run,
         "Name of the test to be run, use the special name 'all' to run all tests. Use 'list' to "
         "output a list of tests and exit");
     app.add_option(
