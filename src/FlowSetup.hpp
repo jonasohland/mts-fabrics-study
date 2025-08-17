@@ -4,6 +4,7 @@
 #include <string>
 #include <mxl/fabrics.h>
 #include <mxl/mxl.h>
+#include "Rate.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -25,6 +26,7 @@ namespace riedel::fabricsperf
         MxlRegions getWriterRegions();
         MxlRegions getReaderRegions();
         mxlInstance instance();
+        RateTimer createRateTimer();
 
     private:
         mxlInstance _mxl{nullptr};

@@ -8,7 +8,8 @@ namespace riedel::fabricsperf
 
     Reflector::Reflector(Config const& config,
         std::unordered_map<std::string, std::unique_ptr<TestFactory>> const& factories)
-        : _config(config)
+        : TestContext(config)
+        , _config(config)
         , _factories(factories)
         , _srv()
     {}
@@ -18,7 +19,11 @@ namespace riedel::fabricsperf
         _srv.Post("/init",
             [this](http::Request const& req, http::Response&) { initTest(req.body); });
         _srv.Post("/flow-def",
-            [this](http::Request const& req, http::Response&) { initFlow(req.body); });
+            [this](http::Request const& req, http::Response&)
+            {
+                reset();
+                resetFlows(req.body);
+            });
         _srv.Post("/target-info",
             [this](http::Request const& req, http::Response&) { onRemoteTargetInfo(req.body); });
         _srv.Get("/target-info",
@@ -31,7 +36,7 @@ namespace riedel::fabricsperf
         // will block until interrupted by Reflector::stop()
         _srv.listen(_config.listenHost(), _config.listenPort());
 
-        resetTest();
+        reset();
 
         MXL_INFO("Reflector server shut down");
     }
@@ -73,16 +78,6 @@ namespace riedel::fabricsperf
         }
     }
 
-    bool Reflector::reflector() const noexcept
-    {
-        return true;
-    }
-
-    bool Reflector::runner() const noexcept
-    {
-        return false;
-    }
-
     void Reflector::timerStart(uint64_t)
     {}
 
@@ -101,28 +96,13 @@ namespace riedel::fabricsperf
         return _interrupted.load(std::memory_order_relaxed);
     }
 
-    FlowSetup& Reflector::flows()
-    {
-        if (!_flowSetup)
-        {
-            throw std::runtime_error{"flows not configured"};
-        }
-
-        return *_flowSetup;
-    }
-
-    Config const& Reflector::config() const
-    {
-        return _config;
-    }
-
     void Reflector::initTest(std::string testName)
     {
         std::unique_ptr<Test> test;
         {
             std::unique_lock _l{_m};
 
-            resetTest();
+            reset();
 
             if (testName != "")
             {
@@ -145,17 +125,7 @@ namespace riedel::fabricsperf
         }
     }
 
-    void Reflector::initFlow(std::string flowDef)
-    {
-        std::unique_lock _l{_m};
-
-        // resets everything
-        reset();
-
-        _flowSetup.emplace(_config.domain, flowDef);
-    }
-
-    void Reflector::resetTest()
+    void Reflector::reset()
     {
         MXL_INFO("Resetting reflector implementation");
 
@@ -173,17 +143,6 @@ namespace riedel::fabricsperf
             _testThread.reset();
 
             _test->teardown(*this);
-        }
-    }
-
-    void Reflector::reset()
-    {
-        resetTest();
-
-        if (_flowSetup)
-        {
-            _flowSetup->destroy();
-            _flowSetup.reset();
         }
     }
 

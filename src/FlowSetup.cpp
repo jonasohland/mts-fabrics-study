@@ -131,4 +131,9 @@ namespace riedel::fabricsperf
     {
         return _mxl;
     }
+
+    RateTimer FlowSetup::createRateTimer()
+    {
+        return {_flowInfo.discrete.grainRate.numerator, _flowInfo.discrete.grainRate.denominator};
+    }
 }

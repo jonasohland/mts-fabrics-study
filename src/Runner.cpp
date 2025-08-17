@@ -6,25 +6,24 @@
 #include <fmt/format.h>
 #include <picojson/picojson.h>
 #include "internal/Logging.hpp"
-#include "Defer.hpp"
 
 namespace riedel::fabricsperf
 {
     namespace http = httplib;
 
     Runner::Runner(Config const& config, std::unique_ptr<Test> test, std::string testName)
-        : _interruped(false)
+        : TestContext(config)
+        , _interruped(false)
         , _test(std::move(test))
         , _testName(std::move(testName))
-        , _flowSetup(config.domain, config.flowConfig())
         , _config(config)
         , _client(fmt::format("http://{}", config.connect))
-    {}
+    {
+        resetFlows(config.flowConfig());
+    }
 
     void Runner::run()
     {
-        auto _ = defer([this]() { _flowSetup.destroy(); });
-
         createRemoteFlowSetup();
         initRemoteTest();
         pullRemoteTargetInfo();
@@ -117,17 +116,7 @@ namespace riedel::fabricsperf
         _interruped.store(true, std::memory_order_relaxed);
     }
 
-    bool Runner::reflector() const noexcept
-    {
-        return false;
-    }
-
-    bool Runner::runner() const noexcept
-    {
-        return true;
-    }
-
-    void Runner::timerStart(uint64_t index)
+    void Runner::timerStart(uint64_t)
     {
         _timerStart = std::chrono::steady_clock::now();
     }
@@ -158,16 +147,6 @@ namespace riedel::fabricsperf
     bool Runner::interrupted() const
     {
         return _interruped.load(std::memory_order_relaxed);
-    }
-
-    FlowSetup& Runner::flows()
-    {
-        return _flowSetup;
-    }
-
-    Config const& Runner::config() const
-    {
-        return _config;
     }
 
 }

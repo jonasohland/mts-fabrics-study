@@ -54,7 +54,12 @@ int main(int argc, char** argv)
     {
         fp::Executor runner{std::move(config)};
 
-        runner.add<fp::MXLHost2Host>();
+        // clang-format off
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN>>();
+        //clang-format on
 
         stopHandler = new std::function<void()>{
             [&]() { runner.stop(); },

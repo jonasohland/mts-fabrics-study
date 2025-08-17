@@ -28,11 +28,17 @@ add_executable(
     "src/main.cpp"
     "src/Config.cpp"
     "src/Test.cpp"
+    "src/Rate.cpp"
     "src/FlowSetup.cpp"
     "src/Executor.cpp"
     "src/Reflector.cpp"
     "src/Runner.cpp"
-    "src/tests/MXLHost2Host.cpp"
+)
+
+set_target_properties(
+    fabrics-perf
+    PROPERTIES
+    CXX_STANDARD 20
 )
 
 target_link_libraries(

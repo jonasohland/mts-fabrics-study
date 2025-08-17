@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <mxl/flow.h>
 #include <mxl/mxl.h>
@@ -12,21 +13,31 @@ namespace riedel::fabricsperf
     class TestContext
     {
     public:
-        TestContext();
-
-        [[nodiscard]]
-        virtual bool reflector() const noexcept = 0;
-        [[nodiscard]]
-        virtual bool runner() const noexcept = 0;
+        TestContext(Config const&);
+        virtual ~TestContext();
 
         virtual void timerStart(uint64_t index) = 0;
         virtual void timerStop() = 0;
         virtual void setLocalTargetInfo(std::string info) = 0;
         [[nodiscard]]
         virtual bool interrupted() const = 0;
-        virtual FlowSetup& flows() = 0;
+
+        FlowSetup& flows();
+
         [[nodiscard]]
-        virtual Config const& config() const = 0;
+        bool reflector() const noexcept;
+        [[nodiscard]]
+        bool runner() const noexcept;
+        [[nodiscard]]
+        Config const& config() const noexcept;
+
+    protected:
+        void resetFlows(std::string const& flowDef);
+
+    private:
+        std::optional<FlowSetup> _flows{};
+        bool _isRunner;
+        Config const& _config;
     };
 
     class Test

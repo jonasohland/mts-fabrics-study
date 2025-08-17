@@ -16,7 +16,7 @@ namespace riedel::fabricsperf
     public:
         Reflector(Config const&,
             std::unordered_map<std::string, std::unique_ptr<TestFactory>> const&);
-        virtual ~Reflector() = default;
+        ~Reflector() override = default;
 
         void run() override;
         void stop() override;
@@ -25,20 +25,14 @@ namespace riedel::fabricsperf
         std::string getLocalTargetInfo();
 
         // TestContext
-        bool reflector() const noexcept override;
-        bool runner() const noexcept override;
         void timerStart(uint64_t index) override;
         void timerStop() override;
         void setLocalTargetInfo(std::string info) override;
         bool interrupted() const override;
-        FlowSetup& flows() override;
-        Config const& config() const override;
 
     private:
-        void resetTest();
         void reset();
         void initTest(std::string testName);
-        void initFlow(std::string flowDef);
 
         void runTest();
 

@@ -19,14 +19,10 @@ namespace riedel::fabricsperf
         void run() override;
 
         // TestContext
-        bool reflector() const noexcept override;
-        bool runner() const noexcept override;
         void timerStart(uint64_t index) override;
         void timerStop() override;
         void setLocalTargetInfo(std::string info) override;
         bool interrupted() const override;
-        FlowSetup& flows() override;
-        Config const& config() const override;
 
     private:
         void createRemoteFlowSetup();
@@ -41,7 +37,6 @@ namespace riedel::fabricsperf
 
         std::unique_ptr<Test> _test;
         std::string _testName;
-        FlowSetup _flowSetup;
 
         Config const& _config;
         httplib::Client _client;
