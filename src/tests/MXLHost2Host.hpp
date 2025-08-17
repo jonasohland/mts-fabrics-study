@@ -33,7 +33,7 @@ namespace riedel::fabricsperf
         [[nodiscard]]
         constexpr std::string name() const final
         {
-            return Name.data.data();
+            return Name.value();
         }
     };
 
