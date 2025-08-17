@@ -18,16 +18,16 @@ namespace riedel::fabricsperf
         OneWay
     };
 
-    template<StaticString, TransferMode, PollMode>
+    template<StaticString, TransferMode, PollMode, mxlFabricsProvider>
     class MXLHost2Host;
 
-    template<StaticString Name, TransferMode TM, PollMode Poll>
+    template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider>
     class MXLHost2HostFactory : public TestFactory
     {
     public:
         std::unique_ptr<Test> operator()() const final
         {
-            return std::make_unique<MXLHost2Host<Name, TM, Poll>>();
+            return std::make_unique<MXLHost2Host<Name, TM, Poll, Provider>>();
         }
 
         [[nodiscard]]
@@ -37,11 +37,11 @@ namespace riedel::fabricsperf
         }
     };
 
-    template<StaticString Name, TransferMode TM, PollMode Poll>
+    template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider>
     class MXLHost2Host : public Test
     {
     public:
-        using Factory = MXLHost2HostFactory<Name, TM, Poll>;
+        using Factory = MXLHost2HostFactory<Name, TM, Poll, Provider>;
 
         bool runInitiator(TestContext const& ctx)
         {
@@ -151,7 +151,7 @@ namespace riedel::fabricsperf
                    .node = initiatorEndpointNode.c_str(),
                    .service = initiatorEndpointService.c_str(),
                 },
-                .provider = MXL_SHARING_PROVIDER_TCP,
+                .provider = Provider,
                 .regions = readerRegions.get(),
             };
 
@@ -160,7 +160,7 @@ namespace riedel::fabricsperf
                    .node = targetEndpointNode.c_str(),
                    .service = targetEndpointService.c_str(),
                  },
-                .provider = MXL_SHARING_PROVIDER_TCP,
+                .provider = Provider,
                 .regions = writerRegions.get(),
             };
             // clang-format on

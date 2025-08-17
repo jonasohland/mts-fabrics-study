@@ -1,6 +1,7 @@
 #include <CLI/CLI.hpp>
 #include <mxl/mxl.h>
 #include "internal/Logging.hpp"
+#include "mxl/fabrics.h"
 #include "tests/MXLHost2Host.hpp"
 #include "Executor.hpp"
 
@@ -55,10 +56,14 @@ int main(int argc, char** argv)
         fp::Executor runner{std::move(config)};
 
         // clang-format off
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP>>();
         //clang-format on
 
         stopHandler = new std::function<void()>{
