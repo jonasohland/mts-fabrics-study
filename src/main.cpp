@@ -30,6 +30,7 @@ int main(int argc, char** argv)
         .gpu = "0",
         .domain = "/dev/shm/mxl",
         .flow = "flow.json",
+        .iterations = 2000,
     };
 
     app.add_flag("--runner", config.runner, "Run as the test runner");
@@ -45,6 +46,7 @@ int main(int argc, char** argv)
     app.add_option(
         "-c, --connect", config.connect, "Address of the reflector to connect to (implies runner)");
     app.add_option("-f, --flow", config.flow, "NMOS flow configuration file");
+    app.add_option("-n, --iterations", config.iterations, "Number of test iterations");
     app.add_option("-l, --listen", config.listen, "Address to bind to (implies reflector)");
 
     CLI11_PARSE(app, argc, argv);

@@ -23,6 +23,7 @@ namespace riedel::fabricsperf
         std::string gpu;
         std::string domain;
         std::string flow;
+        std::size_t iterations;
 
         Mode mode() const;
         int listenPort() const;

@@ -1,3 +1,5 @@
+#include <chrono>
+#include <thread>
 #include <mxl/fabrics.h>
 #include "../Defer.hpp"
 #include "../StaticString.hpp"
@@ -42,6 +44,7 @@ namespace riedel::fabricsperf
     {
     public:
         using Factory = MXLHost2HostFactory<Name, TM, Poll, Provider>;
+        constexpr static int numWarmupIterations = 200;
 
         bool runInitiator(TestContext const& ctx)
         {
@@ -249,23 +252,30 @@ namespace riedel::fabricsperf
                 throw std::runtime_error("failed to add target to initiator");
             }
 
-            for (;;)
+            bool initiatorReady = false;
+
+            // Wait until both this and the remote initiator have connected
+            while (!initiatorReady || !ctx.remoteIsReady())
             {
                 if (ctx.interrupted())
                 {
                     return;
                 }
 
-                auto status = mxlFabricsInitiatorMakeProgressBlocking(_in, 10);
-
-                // done adding target
-                if (status == MXL_STATUS_OK)
+                if (!initiatorReady)
                 {
-                    break;
+                    auto status = mxlFabricsInitiatorMakeProgressBlocking(_in, 100);
+                    // done adding target
+                    if (status == MXL_STATUS_OK)
+                    {
+                        initiatorReady = true;
+                        ctx.signalReady();
+                    }
                 }
 
+                // We also need to poll the target, so the remote initiator can connect
                 uint64_t index;
-                status = mxlFabricsTargetWaitForNewGrain(_tg, &index, 10);
+                auto status = mxlFabricsTargetWaitForNewGrain(_tg, &index, 100);
                 if (status == MXL_ERR_TIMEOUT || status == MXL_STATUS_OK)
                 {
                     continue;
@@ -274,6 +284,8 @@ namespace riedel::fabricsperf
                 // something went wrong
                 throw std::runtime_error("an error ocurred while trying to set up the initiator");
             }
+
+            std::this_thread::sleep_for(std::chrono::seconds(1));
 
             if (ctx.runner())
             {
@@ -299,12 +311,30 @@ namespace riedel::fabricsperf
 
             mxlStatus status;
             uint64_t index = 0;
-            for (;;)
+            for (int i = -numWarmupIterations; i < static_cast<int>(ctx.config().iterations); i++)
             {
                 if (!timer.waitUntilNextFrame())
                 {
                     MXL_WARN("failed to produce a frame in-time");
+                    --i;
                     continue;
+                }
+
+                if (i == 0)
+                {
+                    MXL_INFO("Warmup complete");
+                }
+
+                if (i >= 0)
+                {
+                    if constexpr (TM == TransferMode::Reflect)
+                    {
+                        ctx.timerStart(index);
+                    }
+                    else
+                    {
+                        ctx.recordCurrentTime(index);
+                    }
                 }
 
                 status = mxlFabricsInitiatorTransferGrain(_in, index);
@@ -321,6 +351,7 @@ namespace riedel::fabricsperf
                 // Only wait for reflected grain when running reflect transfer mode.
                 if (TM == TransferMode::OneWay)
                 {
+                    ++index;
                     continue;
                 }
 
@@ -329,12 +360,18 @@ namespace riedel::fabricsperf
                     return;
                 }
 
+                if (i >= 0)
+                {
+                    ctx.timerStop(index);
+                }
+
                 ++index;
             }
         }
 
         void reflector(TestContext& ctx)
         {
+            uint64_t counter = 0;
             while (!ctx.interrupted())
             {
                 uint64_t index;
@@ -345,9 +382,15 @@ namespace riedel::fabricsperf
                     return;
                 }
 
+                if (counter >= numWarmupIterations)
+                {
+                    ctx.recordCurrentTime(index);
+                }
+
                 // Only reflect back when we are running reflect transfer mode
                 if constexpr (TM == TransferMode::OneWay)
                 {
+                    ++counter;
                     continue;
                 }
 
@@ -362,6 +405,8 @@ namespace riedel::fabricsperf
                 {
                     return;
                 }
+
+                ++counter;
             }
         }
 

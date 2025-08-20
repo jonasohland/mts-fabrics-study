@@ -14,6 +14,7 @@ cmake_policy(SET CMP0135 NEW)
 find_package(PkgConfig)
 
 pkg_check_modules(uuid REQUIRED IMPORTED_TARGET uuid)
+pkg_check_modules(csv2 REQUIRED IMPORTED_TARGET csv2)
 add_library(unofficial::UUID::uuid ALIAS PkgConfig::uuid)
 
 add_subdirectory(mxl)
@@ -30,6 +31,7 @@ add_executable(
     "src/Test.cpp"
     "src/Rate.cpp"
     "src/FlowSetup.cpp"
+    "src/Output.cpp"
     "src/Executor.cpp"
     "src/Reflector.cpp"
     "src/Runner.cpp"
@@ -49,6 +51,7 @@ target_link_libraries(
     httplib::httplib
     CLI11::CLI11
     stduuid
+    PkgConfig::csv2
 )
 
 target_include_directories(

@@ -1,4 +1,6 @@
 #include "Reflector.hpp"
+#include <cstdlib>
+#include <sstream>
 #include <uuid.h>
 #include "internal/Logging.hpp"
 
@@ -21,7 +23,7 @@ namespace riedel::fabricsperf
         _srv.Post("/flow-def",
             [this](http::Request const& req, http::Response&)
             {
-                reset();
+                reset(0);
                 resetFlows(req.body);
             });
         _srv.Post("/target-info",
@@ -29,6 +31,36 @@ namespace riedel::fabricsperf
         _srv.Get("/target-info",
             [this](http::Request const&, http::Response& res)
             { res.set_content(getLocalTargetInfo(), "application/json"); });
+        _srv.Post("/ready",
+            [this](http::Request const&, http::Response& response)
+            {
+                if (_localIsReady)
+                {
+                    response.status = 200;
+                }
+                else
+                {
+                    response.status = 412;
+                }
+
+                _remoteIsReady = true;
+            });
+        _srv.Get("/time-records",
+            [this](http::Request const&, http::Response& response)
+            {
+                auto values = exportTimeRecords();
+                if (values.empty())
+                {
+                    return;
+                }
+
+                std::stringstream ss{};
+                std::copy(
+                    values.begin(), values.end() - 1, std::ostream_iterator<uint64_t>{ss, ","});
+                ss << values.back();
+
+                response.body = ss.str();
+            });
 
         MXL_INFO(
             "Starting reflector server on {}:{} ...", _config.listenHost(), _config.listenPort());
@@ -36,7 +68,7 @@ namespace riedel::fabricsperf
         // will block until interrupted by Reflector::stop()
         _srv.listen(_config.listenHost(), _config.listenPort());
 
-        reset();
+        reset(0);
 
         MXL_INFO("Reflector server shut down");
     }
@@ -78,12 +110,6 @@ namespace riedel::fabricsperf
         }
     }
 
-    void Reflector::timerStart(uint64_t)
-    {}
-
-    void Reflector::timerStop()
-    {}
-
     void Reflector::setLocalTargetInfo(std::string info)
     {
         std::unique_lock _l{_m};
@@ -96,15 +122,30 @@ namespace riedel::fabricsperf
         return _interrupted.load(std::memory_order_relaxed);
     }
 
-    void Reflector::initTest(std::string testName)
+    void Reflector::signalReady()
+    {
+        _localIsReady = true;
+    }
+
+    bool Reflector::remoteIsReady()
+    {
+        return _remoteIsReady;
+    }
+
+    void Reflector::initTest(std::string testInfo)
     {
         std::unique_ptr<Test> test;
+
+        auto testName = testInfo.substr(0, testInfo.find(','));
+        auto iterations = std::stoul(testInfo.substr(testInfo.find(',') + 1, testInfo.length()));
+
+        MXL_INFO("starting test '{}', expecting {} iterations", testName, iterations);
         {
             std::unique_lock _l{_m};
 
-            reset();
+            reset(iterations);
 
-            if (testName != "")
+            if (testInfo != "")
             {
                 // call test factory for new test
                 test = (*_factories.at(testName))();
@@ -125,13 +166,18 @@ namespace riedel::fabricsperf
         }
     }
 
-    void Reflector::reset()
+    void Reflector::reset(std::size_t iterations)
     {
         MXL_INFO("Resetting reflector implementation");
 
         // reset target infos
         _localTargetInfo.reset();
         _remoteTargetInfo.reset();
+
+        _remoteIsReady = false;
+        _localIsReady = false;
+
+        resetTimers(iterations);
 
         // signal the test thread to exit
         _interrupted.store(true, std::memory_order_relaxed);

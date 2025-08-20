@@ -25,13 +25,13 @@ namespace riedel::fabricsperf
         std::string getLocalTargetInfo();
 
         // TestContext
-        void timerStart(uint64_t index) override;
-        void timerStop() override;
         void setLocalTargetInfo(std::string info) override;
         bool interrupted() const override;
+        void signalReady() override;
+        bool remoteIsReady() override;
 
     private:
-        void reset();
+        void reset(std::size_t iterations);
         void initTest(std::string testName);
 
         void runTest();
@@ -46,6 +46,8 @@ namespace riedel::fabricsperf
         std::optional<FlowSetup> _flowSetup{std::nullopt};
 
         std::atomic_bool _interrupted{false};
+        bool _remoteIsReady{false};
+        bool _localIsReady{false};
 
         Config const& _config;
         std::unordered_map<std::string, std::unique_ptr<TestFactory>> const& _factories;

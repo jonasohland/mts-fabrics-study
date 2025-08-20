@@ -1,11 +1,13 @@
 #include "Runner.hpp"
 #include <atomic>
+#include <iterator>
 #include <thread>
 #include <httplib.h>
 #include <uuid.h>
 #include <fmt/format.h>
 #include <picojson/picojson.h>
 #include "internal/Logging.hpp"
+#include "CSV.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -45,8 +47,6 @@ namespace riedel::fabricsperf
         auto randomId = picojson::value(uuids::to_string(uuids::uuid_system_generator{}()));
         v.get("id").swap(randomId);
 
-        MXL_INFO("New random flow id for remote setup: {}", v.get("id").to_str());
-
         auto remoteFlowDef = v.serialize();
 
         for (;;)
@@ -77,7 +77,8 @@ namespace riedel::fabricsperf
 
     void Runner::initRemoteTest()
     {
-        auto result = _client.Post("/init", _testName, "text/plain");
+        auto result = _client.Post(
+            "/init", fmt::format("{},{}", _testName, _config.iterations), "text/plain");
         if (auto err = result.error(); err != http::Error::Success)
         {
             throw std::runtime_error(
@@ -88,8 +89,6 @@ namespace riedel::fabricsperf
         {
             throw std::runtime_error(fmt::format("failed to init remote test: {}", result->body));
         }
-
-        MXL_INFO("remote test initialized");
     }
 
     void Runner::pullRemoteTargetInfo()
@@ -116,18 +115,6 @@ namespace riedel::fabricsperf
         _interruped.store(true, std::memory_order_relaxed);
     }
 
-    void Runner::timerStart(uint64_t)
-    {
-        _timerStart = std::chrono::steady_clock::now();
-    }
-
-    void Runner::timerStop()
-    {
-        auto duration = std::chrono::steady_clock::now() - _timerStart;
-        MXL_INFO("roundtrip: {}",
-            std::chrono::duration_cast<std::chrono::microseconds>(duration).count());
-    }
-
     void Runner::setLocalTargetInfo(std::string info)
     {
         auto result = _client.Post("/target-info", info, "application/json");
@@ -149,4 +136,67 @@ namespace riedel::fabricsperf
         return _interruped.load(std::memory_order_relaxed);
     }
 
+    void Runner::signalReady()
+    {
+        _localIsReady = true;
+    }
+
+    bool Runner::remoteIsReady()
+    {
+        if (_localIsReady)
+        {
+            http::Result result;
+            result = _client.Post("/ready");
+            if (auto err = result.error(); err != http::Error::Success)
+            {
+                MXL_WARN("failed to post local readiness state: {}", http::to_string(err));
+                return false;
+            }
+
+            // remote responds with 200 to our update when it is ready
+            if (result->status == 200)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    std::array<std::vector<std::string>, 3> Runner::exportResults()
+    {
+        auto itimers = exportTimers();
+        auto ilocalTimeRecords = exportTimeRecords();
+
+        std::vector<std::string> timers{};
+        std::vector<std::string> localTimeRecords{};
+        std::vector<std::string> remoteTimeRecords{};
+
+        csv::Reader reader;
+        auto result = _client.Get("/time-records");
+        if (auto err = result.error(); err != http::Error::Success)
+        {
+            throw std::runtime_error(
+                std::format("failed to get remote time records: {}", http::to_string(err)));
+        }
+
+        reader.parse(result->body);
+        for (auto const& val : *reader.begin())
+        {
+            // this hurts
+            val.read_value(remoteTimeRecords.emplace_back());
+        }
+
+        std::transform(itimers.begin(),
+            itimers.end(),
+            std::back_inserter(timers),
+            [](uint64_t val) { return std::to_string(val); });
+
+        std::transform(ilocalTimeRecords.begin(),
+            ilocalTimeRecords.end(),
+            std::back_inserter(localTimeRecords),
+            [](uint64_t val) { return std::to_string(val); });
+
+        return {timers, localTimeRecords, remoteTimeRecords};
+    }
 }

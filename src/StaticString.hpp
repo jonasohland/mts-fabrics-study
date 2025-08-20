@@ -21,7 +21,7 @@ namespace riedel::fabricsperf
         [[nodiscard]]
         constexpr std::string value() const
         {
-            return {data.data(), data.size()};
+            return {data.data(), data.size() - 1};
         }
     };
 

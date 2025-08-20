@@ -1,6 +1,9 @@
 #include "Executor.hpp"
 #include <exception>
+#include <fstream>
 #include "internal/Logging.hpp"
+#include "CSV.hpp"
+#include "Output.hpp"
 #include "Reflector.hpp"
 #include "Runner.hpp"
 
@@ -36,6 +39,8 @@ namespace riedel::fabricsperf
 
     void Executor::runner()
     {
+        Results results;
+
         if (_config.run == "all")
         {
             for (auto& [name, factory] : _factories)
@@ -47,14 +52,20 @@ namespace riedel::fabricsperf
 
                 _inner = std::make_unique<Runner>(_config, (*factory)(), name);
                 _inner->run();
-            }
 
-            return;
+                results.emplace_back(name, dynamic_cast<Runner&>(*_inner).exportResults());
+            }
+        }
+        else
+        {
+            auto test = (*_factories.at(_config.run))();
+            _inner = std::make_unique<Runner>(_config, std::move(test), _config.run);
+            _inner->run();
+
+            results.emplace_back(_config.run, dynamic_cast<Runner&>(*_inner).exportResults());
         }
 
-        auto test = (*_factories.at(_config.run))();
-        _inner = std::make_unique<Runner>(_config, std::move(test), _config.run);
-        _inner->run();
+        writeResults(_config.output, std::move(results));
     }
 
     void Executor::reflector()

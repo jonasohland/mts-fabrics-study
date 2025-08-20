@@ -13,16 +13,22 @@ namespace riedel::fabricsperf
     class TestContext
     {
     public:
+        using UnsigendNanoseconds = std::chrono::duration<std::uint64_t, std::nano>;
+
         TestContext(Config const&);
         virtual ~TestContext();
 
-        virtual void timerStart(uint64_t index) = 0;
-        virtual void timerStop() = 0;
         virtual void setLocalTargetInfo(std::string info) = 0;
         [[nodiscard]]
         virtual bool interrupted() const = 0;
+        virtual void signalReady() = 0;
+        virtual bool remoteIsReady() = 0;
 
         FlowSetup& flows();
+
+        void timerStart(uint64_t index);
+        void timerStop(uint64_t index);
+        void recordCurrentTime(uint64_t index);
 
         [[nodiscard]]
         bool reflector() const noexcept;
@@ -31,10 +37,27 @@ namespace riedel::fabricsperf
         [[nodiscard]]
         Config const& config() const noexcept;
 
+        void resetTimers(std::size_t iterations) noexcept;
+        std::vector<std::uint64_t> exportTimeRecords() const;
+        std::vector<std::uint64_t> exportTimers() const;
+
     protected:
         void resetFlows(std::string const& flowDef);
 
     private:
+        std::size_t getTimerIndex(uint64_t);
+
+        struct TimerEntry
+        {
+            bool isValid;
+            std::chrono::system_clock::time_point start;
+            std::chrono::system_clock::time_point stop;
+        };
+
+        std::vector<TimerEntry> _timers;
+        std::vector<std::optional<std::chrono::system_clock::time_point>> _timeRecords;
+        uint64_t _timerIndexOffset = std::numeric_limits<uint64_t>::max();
+
         std::optional<FlowSetup> _flows{};
         bool _isRunner;
         Config const& _config;
