@@ -177,8 +177,6 @@ namespace riedel::fabricsperf
         _remoteIsReady = false;
         _localIsReady = false;
 
-        resetTimers(iterations);
-
         // signal the test thread to exit
         _interrupted.store(true, std::memory_order_relaxed);
 
@@ -190,6 +188,8 @@ namespace riedel::fabricsperf
 
             _test->teardown(*this);
         }
+
+        resetTimers(iterations);
     }
 
     void Reflector::runTest()

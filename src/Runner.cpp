@@ -33,6 +33,7 @@ namespace riedel::fabricsperf
         _test->setup(*this);
         _test->onRemoteEndpointAvailable(*this, *_remoteTargetInfo);
         _test->run(*this);
+        _test->teardown(*this);
     }
 
     void Runner::createRemoteFlowSetup()

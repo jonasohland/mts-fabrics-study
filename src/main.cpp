@@ -3,6 +3,8 @@
 #include "internal/Logging.hpp"
 #include "mxl/fabrics.h"
 #include "tests/MXLHost2Host.hpp"
+#include "tests/TestTemplateOneWay.hpp"
+#include "tests/TestTemplatePingPong.hpp"
 #include "Executor.hpp"
 
 namespace fp = riedel::fabricsperf;
@@ -66,6 +68,8 @@ int main(int argc, char** argv)
         runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP>>();
         runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP>>();
         runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP>>();
+        runner.add<fp::OneWayTest>();
+        runner.add<fp::PingPongTest>();
         //clang-format on
 
         stopHandler = new std::function<void()>{
