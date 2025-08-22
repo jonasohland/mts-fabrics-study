@@ -28,7 +28,7 @@ int main(int argc, char** argv)
         .run = "all",
         .targetEndpoint = "127.0.0.1:9992",
         .initiatorEndpoint = "127.0.0.1:9993",
-        .output = "output.csv",
+        .output = "output/",
         .gpu = 0,
         .domain = "/dev/shm/mxl",
         .flow = "flow.json",
@@ -39,7 +39,10 @@ int main(int argc, char** argv)
     app.add_flag("--reflector", config.reflector, "Run as the reflector instance");
     app.add_option("-t, --target", config.targetEndpoint, "Local fabric node address");
     app.add_option("-i, --initiator", config.initiatorEndpoint, "Local fabric service");
-    app.add_option("-o, --output", config.output, "Path at which the report should be written");
+    app.add_option("-o, --output",
+        config.output,
+        "Directory at which the report should be written. Each test case will output a csv file "
+        "with the name of the test case. Ex: <output>/MXLHost2Host+Verbs+Reflect+Wait.csv");
     app.add_option("-g, --gpu", config.gpu, "Id of the gpu that should be used");
     app.add_option("-r, --run",
         config.run,
