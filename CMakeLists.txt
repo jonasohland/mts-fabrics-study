@@ -23,6 +23,7 @@ add_subdirectory(mxl)
 find_package(httplib CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(stduuid CONFIG REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 
 add_executable(
     fabrics-perf
@@ -52,6 +53,7 @@ target_link_libraries(
     CLI11::CLI11
     stduuid
     PkgConfig::csv2
+    CUDA::cudart
 )
 
 target_include_directories(
