@@ -5,6 +5,7 @@
 #include "../StaticString.hpp"
 #include "../Test.hpp"
 #include "internal/Logging.hpp"
+#include "mxl/mxl.h"
 
 namespace riedel::fabricsperf
 {
@@ -146,32 +147,12 @@ namespace riedel::fabricsperf
                 throw std::runtime_error("failed to create target");
             }
 
-            // This probably goes into a consteval function
-            MxlRegions readerRegions;
-            if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_HOST)
-            {
-                readerRegions = ctx.flows().getReaderRegions();
-            }
-            else if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA)
-            {
-                readerRegions = ctx.flows().getCudaReaderRegions(ctx.config().gpu);
-            }
-
-            // This probably goes into a consteval function
-            MxlRegions writerRegions;
-            if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_HOST)
-            {
-                writerRegions = ctx.flows().getWriterRegions();
-            }
-            else if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA)
-            {
-                writerRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
-            }
-
             auto targetEndpointNode = ctx.config().targetEndpointNode();
             auto targetEndpointService = ctx.config().targetEndpointService();
             auto initiatorEndpointNode = ctx.config().initiatorEndpointNode();
             auto initiatorEndpointService = ctx.config().initiatorEndpointService();
+            auto writerRegions = getWriterRegions(ctx);
+            auto readerRegions = getReaderRegions(ctx);
 
             // clang-format off
             auto initiatorConfig = mxlInitiatorConfig{
@@ -338,6 +319,7 @@ namespace riedel::fabricsperf
 
             mxlStatus status;
             uint64_t index = 0;
+
             for (int i = -numWarmupIterations; i < static_cast<int>(ctx.config().iterations); i++)
             {
                 if (!timer.waitUntilNextFrame())
@@ -365,6 +347,12 @@ namespace riedel::fabricsperf
                 }
 
                 status = mxlFabricsInitiatorTransferGrain(_in, index);
+                if (status == MXL_ERR_NOT_READY)
+                {
+                    // Retry the same iteration again
+                    i--;
+                    continue;
+                }
                 if (status != MXL_STATUS_OK)
                 {
                     throw std::runtime_error("failed to submit grain to fabric");
@@ -435,6 +423,44 @@ namespace riedel::fabricsperf
 
                 ++counter;
             }
+        }
+
+        MxlRegions getReaderRegions(TestContext& ctx)
+        {
+            MxlRegions regions;
+            if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_HOST)
+            {
+                regions = ctx.flows().getReaderRegions();
+            }
+            else if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA)
+            {
+                regions = ctx.flows().getCudaReaderRegions(ctx.config().gpu);
+            }
+            else
+            {
+                static_assert(false, "Unsupported memory region location.");
+            }
+
+            return regions;
+        }
+
+        MxlRegions getWriterRegions(TestContext& ctx)
+        {
+            MxlRegions regions;
+            if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_HOST)
+            {
+                regions = ctx.flows().getWriterRegions();
+            }
+            else if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA)
+            {
+                regions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
+            }
+            else
+            {
+                static_assert(false, "Unsupported memory region location.");
+            }
+
+            return regions;
         }
 
         mxlFabricsInstance _instance;

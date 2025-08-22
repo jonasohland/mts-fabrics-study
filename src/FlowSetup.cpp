@@ -1,4 +1,5 @@
 #include "FlowSetup.hpp"
+#include <cstdint>
 #include <stdexcept>
 #include <uuid.h>
 #include <cuda_runtime.h>
@@ -63,6 +64,29 @@ namespace riedel::fabricsperf
     void FlowSetup::destroy()
     {
         bool anyCleanup = false;
+
+        if (_cudaWriterBuf)
+        {
+            if (cudaFree(_cudaWriterBuf) != cudaSuccess)
+            {
+                throw std::runtime_error("failed to free writer cuda buffer");
+            }
+
+            anyCleanup = true;
+            _cudaWriterBuf = nullptr;
+        }
+
+        if (_cudaReaderBuf)
+        {
+            if (cudaFree(_cudaReaderBuf) != cudaSuccess)
+            {
+                throw std::runtime_error("failed to free reader cuda buffer");
+            }
+
+            anyCleanup = true;
+            _cudaReaderBuf = nullptr;
+        }
+
         if (_fr)
         {
             if (mxlReleaseFlowReader(_mxl, _fr) != MXL_STATUS_OK)
@@ -129,20 +153,25 @@ namespace riedel::fabricsperf
         return MxlRegions{regions, RegionsDeleter{}};
     }
 
-    MxlRegions FlowSetup::getCudaWriterRegions(uint32_t deviceId)
+    MxlRegions FlowSetup::getCudaWriterRegions(std::uint64_t deviceId)
     {
         return getCudaRegions(deviceId, &_cudaWriterBuf);
     }
 
-    MxlRegions FlowSetup::getCudaReaderRegions(uint32_t deviceId)
+    MxlRegions FlowSetup::getCudaReaderRegions(std::uint64_t deviceId)
     {
         return getCudaRegions(deviceId, &_cudaReaderBuf);
     }
 
-    MxlRegions FlowSetup::getCudaRegions(uint32_t deviceId, void** cudaBuf)
+    MxlRegions FlowSetup::getCudaRegions(std::uint64_t deviceId, void** cudaBuf)
     {
         mxl::lib::FlowParser descriptorParser{_flowConfig};
         size_t cudaBufSize = descriptorParser.getPayloadSize() + 8192; // 8192 is the header size.
+
+        if (cudaSetDevice(deviceId) != cudaSuccess)
+        {
+            throw std::runtime_error("failed to select cuda device");
+        }
 
         mxlRegions regions;
         if (cudaMalloc(cudaBuf, cudaBufSize) != cudaSuccess)

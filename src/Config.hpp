@@ -21,7 +21,7 @@ namespace riedel::fabricsperf
         std::string targetEndpoint;
         std::string initiatorEndpoint;
         std::string output;
-        uint64_t gpu;
+        std::uint64_t gpu;
         std::string domain;
         std::string flow;
         std::size_t iterations;
