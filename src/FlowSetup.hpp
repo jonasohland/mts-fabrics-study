@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <mxl/fabrics.h>
@@ -25,13 +26,21 @@ namespace riedel::fabricsperf
 
         MxlRegions getWriterRegions();
         MxlRegions getReaderRegions();
+
+        MxlRegions getCudaWriterRegions(uint32_t deviceId);
+        MxlRegions getCudaReaderRegions(uint32_t deviceId);
         mxlInstance instance();
         RateTimer createRateTimer();
 
     private:
+        MxlRegions getCudaRegions(uint32_t deviceId, void** cudaBuf);
+
         mxlInstance _mxl{nullptr};
         mxlFlowReader _fr{nullptr};
         mxlFlowWriter _fw{nullptr};
+
+        void* _cudaWriterBuf;
+        void* _cudaReaderBuf;
 
         FlowInfo _flowInfo{};
         std::string _flowConfig;

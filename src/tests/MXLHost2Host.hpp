@@ -20,16 +20,19 @@ namespace riedel::fabricsperf
         OneWay
     };
 
-    template<StaticString, TransferMode, PollMode, mxlFabricsProvider>
+    template<StaticString, TransferMode, PollMode, mxlFabricsProvider, mxlFabricsMemoryRegionType,
+        mxlFabricsMemoryRegionType>
     class MXLHost2Host;
 
-    template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider>
+    template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider,
+        mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation>
     class MXLHost2HostFactory : public TestFactory
     {
     public:
         std::unique_ptr<Test> operator()() const final
         {
-            return std::make_unique<MXLHost2Host<Name, TM, Poll, Provider>>();
+            return std::make_unique<
+                MXLHost2Host<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>>();
         }
 
         [[nodiscard]]
@@ -39,11 +42,13 @@ namespace riedel::fabricsperf
         }
     };
 
-    template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider>
+    template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider,
+        mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation>
     class MXLHost2Host : public Test
     {
     public:
-        using Factory = MXLHost2HostFactory<Name, TM, Poll, Provider>;
+        using Factory =
+            MXLHost2HostFactory<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>;
         constexpr static int numWarmupIterations = 200;
 
         bool runInitiator(TestContext const& ctx)
@@ -141,8 +146,28 @@ namespace riedel::fabricsperf
                 throw std::runtime_error("failed to create target");
             }
 
-            auto readerRegions = ctx.flows().getReaderRegions();
-            auto writerRegions = ctx.flows().getWriterRegions();
+            // This probably goes into a consteval function
+            MxlRegions readerRegions;
+            if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_HOST)
+            {
+                readerRegions = ctx.flows().getReaderRegions();
+            }
+            else if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA)
+            {
+                readerRegions = ctx.flows().getCudaReaderRegions(ctx.config().gpu);
+            }
+
+            // This probably goes into a consteval function
+            MxlRegions writerRegions;
+            if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_HOST)
+            {
+                writerRegions = ctx.flows().getWriterRegions();
+            }
+            else if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA)
+            {
+                writerRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
+            }
+
             auto targetEndpointNode = ctx.config().targetEndpointNode();
             auto targetEndpointService = ctx.config().targetEndpointService();
             auto initiatorEndpointNode = ctx.config().initiatorEndpointNode();
@@ -156,6 +181,7 @@ namespace riedel::fabricsperf
                 },
                 .provider = Provider,
                 .regions = readerRegions.get(),
+                .deviceSupport=InitiatorLocation != MXL_MEMORY_REGION_TYPE_HOST,
             };
 
             auto targetConfig = mxlTargetConfig{
@@ -165,6 +191,7 @@ namespace riedel::fabricsperf
                  },
                 .provider = Provider,
                 .regions = writerRegions.get(),
+                .deviceSupport=TargetLocation != MXL_MEMORY_REGION_TYPE_HOST,
             };
             // clang-format on
 

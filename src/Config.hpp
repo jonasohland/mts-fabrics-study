@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace riedel::fabricsperf
@@ -20,7 +21,7 @@ namespace riedel::fabricsperf
         std::string targetEndpoint;
         std::string initiatorEndpoint;
         std::string output;
-        std::string gpu;
+        uint64_t gpu;
         std::string domain;
         std::string flow;
         std::size_t iterations;

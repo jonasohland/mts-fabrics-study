@@ -29,7 +29,7 @@ int main(int argc, char** argv)
         .targetEndpoint = "127.0.0.1:9992",
         .initiatorEndpoint = "127.0.0.1:9993",
         .output = "output.csv",
-        .gpu = "0",
+        .gpu = 0,
         .domain = "/dev/shm/mxl",
         .flow = "flow.json",
         .iterations = 2000,
@@ -50,6 +50,7 @@ int main(int argc, char** argv)
     app.add_option("-f, --flow", config.flow, "NMOS flow configuration file");
     app.add_option("-n, --iterations", config.iterations, "Number of test iterations");
     app.add_option("-l, --listen", config.listen, "Address to bind to (implies reflector)");
+    app.add_option("-d, --domain", config.domain, "MXL Domain");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -60,14 +61,17 @@ int main(int argc, char** argv)
         fp::Executor runner{std::move(config)};
 
         // clang-format off
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+Verbs+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+    
         runner.add<fp::OneWayTest>();
         runner.add<fp::PingPongTest>();
         //clang-format on

@@ -1,8 +1,10 @@
 #include "FlowSetup.hpp"
 #include <stdexcept>
 #include <uuid.h>
+#include <cuda_runtime.h>
 #include <mxl/flow.h>
 #include <mxl/mxl.h>
+#include "../mxl/lib/src/internal/FlowParser.hpp"
 #include "internal/Logging.hpp"
 
 namespace riedel::fabricsperf
@@ -122,6 +124,43 @@ namespace riedel::fabricsperf
         if (mxlFabricsRegionsForFlowReader(_fr, &regions) != MXL_STATUS_OK)
         {
             throw std::runtime_error("failed to get regions from flow data");
+        }
+
+        return MxlRegions{regions, RegionsDeleter{}};
+    }
+
+    MxlRegions FlowSetup::getCudaWriterRegions(uint32_t deviceId)
+    {
+        return getCudaRegions(deviceId, &_cudaWriterBuf);
+    }
+
+    MxlRegions FlowSetup::getCudaReaderRegions(uint32_t deviceId)
+    {
+        return getCudaRegions(deviceId, &_cudaReaderBuf);
+    }
+
+    MxlRegions FlowSetup::getCudaRegions(uint32_t deviceId, void** cudaBuf)
+    {
+        mxl::lib::FlowParser descriptorParser{_flowConfig};
+        size_t cudaBufSize = descriptorParser.getPayloadSize() + 8192; // 8192 is the header size.
+
+        mxlRegions regions;
+        if (cudaMalloc(&_cudaWriterBuf, cudaBufSize) != cudaSuccess)
+        {
+            throw std::runtime_error("failed to allocate cuda region");
+        }
+
+        mxlFabricsMemoryRegion region{
+            reinterpret_cast<std::uintptr_t>(*cudaBuf),
+            cudaBufSize,
+            {MXL_MEMORY_REGION_TYPE_CUDA, deviceId}
+        };
+
+        mxlFabricsMemoryRegionGroup group{&region, 1};
+
+        if (mxlFabricsRegionsFromBufferGroups(&group, 1, &regions))
+        {
+            throw std::runtime_error("failed to create mxl regions from cuda region groups");
         }
 
         return MxlRegions{regions, RegionsDeleter{}};
