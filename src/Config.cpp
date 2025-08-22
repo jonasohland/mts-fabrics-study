@@ -5,7 +5,6 @@
 #include <stdexcept>
 #include <string>
 #include <fmt/format.h>
-#include "internal/Logging.hpp"
 
 namespace riedel::fabricsperf
 {
