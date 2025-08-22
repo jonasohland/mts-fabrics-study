@@ -145,7 +145,7 @@ namespace riedel::fabricsperf
         size_t cudaBufSize = descriptorParser.getPayloadSize() + 8192; // 8192 is the header size.
 
         mxlRegions regions;
-        if (cudaMalloc(&_cudaWriterBuf, cudaBufSize) != cudaSuccess)
+        if (cudaMalloc(cudaBuf, cudaBufSize) != cudaSuccess)
         {
             throw std::runtime_error("failed to allocate cuda region");
         }
