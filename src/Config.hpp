@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace riedel::fabricsperf
 {
@@ -17,7 +18,7 @@ namespace riedel::fabricsperf
         bool reflector;
         std::string listen;
         std::string connect;
-        std::string run;
+        std::vector<std::string> run;
         std::string targetEndpoint;
         std::string initiatorEndpoint;
         std::string output;
