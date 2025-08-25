@@ -131,6 +131,26 @@ namespace riedel::fabricsperf
         }
     }
 
+    mxlFlowInfo const& FlowSetup::flowInfo() const noexcept
+    {
+        return _flowInfo;
+    }
+
+    uuids::uuid FlowSetup::localFlowId() noexcept
+    {
+        return _flowInfo.common.id;
+    }
+
+    mxlFlowReader FlowSetup::reader() noexcept
+    {
+        return _fr;
+    }
+
+    mxlFlowWriter FlowSetup::writer() noexcept
+    {
+        return _fw;
+    }
+
     MxlRegions FlowSetup::getWriterRegions()
     {
         mxlRegions regions;
@@ -195,12 +215,12 @@ namespace riedel::fabricsperf
         return MxlRegions{regions, RegionsDeleter{}};
     }
 
-    mxlInstance FlowSetup::instance()
+    mxlInstance FlowSetup::instance() noexcept
     {
         return _mxl;
     }
 
-    RateTimer FlowSetup::createRateTimer()
+    RateTimer FlowSetup::createRateTimer() noexcept
     {
         return {_flowInfo.discrete.grainRate.numerator, _flowInfo.discrete.grainRate.denominator};
     }

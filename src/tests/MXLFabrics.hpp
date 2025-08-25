@@ -1,3 +1,5 @@
+#pragma once
+
 #include <chrono>
 #include <thread>
 #include <mxl/fabrics.h>
@@ -6,21 +8,10 @@
 #include "../Test.hpp"
 #include "internal/Logging.hpp"
 #include "mxl/mxl.h"
+#include "Common.hpp"
 
 namespace riedel::fabricsperf
 {
-    enum class PollMode
-    {
-        WAIT,
-        SPIN
-    };
-
-    enum class TransferMode
-    {
-        Reflect,
-        OneWay
-    };
-
     template<StaticString, TransferMode, PollMode, mxlFabricsProvider, mxlFabricsMemoryRegionType,
         mxlFabricsMemoryRegionType>
     class MXLFabrics;
@@ -346,16 +337,25 @@ namespace riedel::fabricsperf
                     }
                 }
 
-                status = mxlFabricsInitiatorTransferGrain(_in, index);
-                if (status == MXL_ERR_NOT_READY)
+                for (;;)
                 {
-                    // Retry the same iteration again
-                    i--;
-                    continue;
-                }
-                if (status != MXL_STATUS_OK)
-                {
-                    throw std::runtime_error("failed to submit grain to fabric");
+                    status = mxlFabricsInitiatorTransferGrain(_in, index);
+                    if (status == MXL_ERR_NOT_READY)
+                    {
+                        if (ctx.interrupted())
+                        {
+                            return;
+                        }
+
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        continue;
+                    }
+                    if (status != MXL_STATUS_OK)
+                    {
+                        throw std::runtime_error("failed to submit grain to fabric");
+                    }
+
+                    break;
                 }
 
                 if (!runInitiator(ctx))
@@ -409,11 +409,28 @@ namespace riedel::fabricsperf
                     continue;
                 }
 
-                status = mxlFabricsInitiatorTransferGrain(_in, index);
-                if (status != MXL_STATUS_OK)
+                for (;;)
                 {
-                    throw std::runtime_error(
-                        "something went wrong while submitting received grain to fabric");
+                    status = mxlFabricsInitiatorTransferGrain(_in, index);
+                    if (status == MXL_ERR_NOT_READY)
+                    {
+                        if (ctx.interrupted())
+                        {
+                            return;
+                        }
+
+                        // this should only happen for the first transfer while we are still in
+                        // warmup mode
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        continue;
+                    }
+                    if (status != MXL_STATUS_OK)
+                    {
+                        throw std::runtime_error(
+                            "something went wrong while submitting received grain to fabric");
+                    }
+
+                    break;
                 }
 
                 if (!runInitiator(ctx))

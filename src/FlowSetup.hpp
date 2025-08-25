@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <uuid.h>
 #include <mxl/fabrics.h>
+#include <mxl/flow.h>
 #include <mxl/mxl.h>
 #include "Rate.hpp"
 
@@ -24,13 +26,20 @@ namespace riedel::fabricsperf
 
         void destroy();
 
+        uuids::uuid localFlowId() noexcept;
+
+        mxlFlowInfo const& flowInfo() const noexcept;
+
+        mxlFlowReader reader() noexcept;
+        mxlFlowWriter writer() noexcept;
+
         MxlRegions getWriterRegions();
         MxlRegions getReaderRegions();
 
         MxlRegions getCudaWriterRegions(std::uint64_t deviceId);
         MxlRegions getCudaReaderRegions(std::uint64_t deviceId);
-        mxlInstance instance();
-        RateTimer createRateTimer();
+        mxlInstance instance() noexcept;
+        RateTimer createRateTimer() noexcept;
 
     private:
         MxlRegions getCudaRegions(std::uint64_t deviceId, void** cudaBuf);
@@ -42,7 +51,7 @@ namespace riedel::fabricsperf
         void* _cudaWriterBuf{nullptr};
         void* _cudaReaderBuf{nullptr};
 
-        FlowInfo _flowInfo{};
+        mxlFlowInfo _flowInfo{};
         std::string _flowConfig;
     };
 }

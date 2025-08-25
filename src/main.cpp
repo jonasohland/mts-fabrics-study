@@ -3,6 +3,7 @@
 #include "internal/Logging.hpp"
 #include "mxl/fabrics.h"
 #include "tests/MXLFabrics.hpp"
+#include "tests/MXLSHM.hpp"
 #include "tests/TestTemplateOneWay.hpp"
 #include "tests/TestTemplatePingPong.hpp"
 #include "Executor.hpp"
@@ -84,6 +85,14 @@ int main(int argc, char** argv)
         runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+SHM+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+SHM+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+SHM+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+SHM+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+SHM+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+SHM+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+SHM+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLSHM<"MXLSHM+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN>>();
+        runner.add<fp::MXLSHM<"MXLSHM+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT>>();
+        runner.add<fp::MXLSHM<"MXLSHM+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN>>();
+        runner.add<fp::MXLSHM<"MXLSHM+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT>>();
         runner.add<fp::OneWayTest>();
         runner.add<fp::PingPongTest>();
         //clang-format on
