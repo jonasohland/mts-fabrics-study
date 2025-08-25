@@ -25,7 +25,7 @@ int main(int argc, char** argv)
         .reflector = false,
         .listen = "",
         .connect = "",
-        .run = "all",
+        .run = {},
         .targetEndpoint = "127.0.0.1:9992",
         .initiatorEndpoint = "127.0.0.1:9993",
         .output = "output/",

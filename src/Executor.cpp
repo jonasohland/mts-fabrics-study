@@ -1,8 +1,5 @@
 #include "Executor.hpp"
 #include <exception>
-#include <fstream>
-#include "internal/Logging.hpp"
-#include "CSV.hpp"
 #include "Output.hpp"
 #include "Reflector.hpp"
 #include "Runner.hpp"
@@ -18,7 +15,7 @@ namespace riedel::fabricsperf
 
     void Executor::run()
     {
-        if (_config.run == "list")
+        if (_config.run.empty())
         {
             for (auto const& [name, _] : _factories)
             {
@@ -41,28 +38,21 @@ namespace riedel::fabricsperf
     {
         Results results;
 
-        if (_config.run == "all")
+        for (auto const& testCase : _config.run)
         {
-            for (auto& [name, factory] : _factories)
+            if (_stopped.load())
             {
-                if (_stopped.load())
-                {
-                    return;
-                }
-
-                _inner = std::make_unique<Runner>(_config, (*factory)(), name);
-                _inner->run();
-
-                results.emplace_back(name, dynamic_cast<Runner&>(*_inner).exportResults());
+                return;
             }
-        }
-        else
-        {
-            auto test = (*_factories.at(_config.run))();
-            _inner = std::make_unique<Runner>(_config, std::move(test), _config.run);
+
+            auto test = (*_factories.at(testCase))();
+            _inner = std::make_unique<Runner>(_config, std::move(test), testCase);
             _inner->run();
 
-            results.emplace_back(_config.run, dynamic_cast<Runner&>(*_inner).exportResults());
+            results.emplace_back(testCase, dynamic_cast<Runner&>(*_inner).exportResults());
+
+            _inner.reset(); // Destroy the previous Runner and all its child when we are done with
+                            // them.
         }
 
         writeResults(_config.output, std::move(results));
