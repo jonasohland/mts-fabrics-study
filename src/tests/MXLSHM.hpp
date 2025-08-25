@@ -122,7 +122,6 @@ namespace riedel::fabricsperf
 
                 if (i >= 0)
                 {
-                    MXL_INFO("recording index {}", index);
                     if constexpr (TM == TransferMode::OneWay)
                     {
                         ctx.recordCurrentTime(index);
@@ -190,7 +189,6 @@ namespace riedel::fabricsperf
 
                 if (index >= 20)
                 {
-                    MXL_INFO("recording index {}", index);
                     ctx.recordCurrentTime(index);
                 }
 

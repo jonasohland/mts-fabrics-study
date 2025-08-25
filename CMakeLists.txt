@@ -19,7 +19,6 @@ add_library(unofficial::UUID::uuid ALIAS PkgConfig::uuid)
 
 add_subdirectory(mxl)
 
-
 find_package(httplib CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(stduuid CONFIG REQUIRED)
@@ -60,4 +59,10 @@ target_include_directories(
     fabrics-perf
     PRIVATE
     "mxl/lib/src"
+)
+
+target_include_directories(
+    fabrics-perf
+    PRIVATE
+    "mxl/lib/fabrics/ofi/src/internal"
 )
