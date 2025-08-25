@@ -15,20 +15,23 @@ namespace riedel::fabricsperf
 
     void Executor::run()
     {
-        if (_config.run.empty())
-        {
-            for (auto const& [name, _] : _factories)
-            {
-                std::cout << name << '\n';
-            }
-
-            return;
-        }
-
         auto mode = _config.mode();
         switch (mode)
         {
-            case Mode::RUNNER:    runner(); break;
+            case Mode::RUNNER: {
+                if (_config.run.empty())
+                {
+                    for (auto const& [name, _] : _factories)
+                    {
+                        std::cout << name << '\n';
+                    }
+
+                    return;
+                }
+
+                runner();
+                break;
+            }
             case Mode::REFLECTOR: reflector(); break;
             default:              std::terminate();
         }
