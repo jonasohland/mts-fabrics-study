@@ -23,17 +23,17 @@ namespace riedel::fabricsperf
 
     template<StaticString, TransferMode, PollMode, mxlFabricsProvider, mxlFabricsMemoryRegionType,
         mxlFabricsMemoryRegionType>
-    class MXLHost2Host;
+    class MXLFabrics;
 
     template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider,
         mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation>
-    class MXLHost2HostFactory : public TestFactory
+    class MXLFabricsFactory : public TestFactory
     {
     public:
         std::unique_ptr<Test> operator()() const final
         {
             return std::make_unique<
-                MXLHost2Host<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>>();
+                MXLFabrics<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>>();
         }
 
         [[nodiscard]]
@@ -45,11 +45,11 @@ namespace riedel::fabricsperf
 
     template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider,
         mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation>
-    class MXLHost2Host : public Test
+    class MXLFabrics : public Test
     {
     public:
         using Factory =
-            MXLHost2HostFactory<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>;
+            MXLFabricsFactory<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>;
         constexpr static int numWarmupIterations = 200;
 
         bool runInitiator(TestContext const& ctx)
