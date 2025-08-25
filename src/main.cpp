@@ -2,7 +2,7 @@
 #include <mxl/mxl.h>
 #include "internal/Logging.hpp"
 #include "mxl/fabrics.h"
-#include "tests/MXLHost2Host.hpp"
+#include "tests/MXLFabrics.hpp"
 #include "tests/TestTemplateOneWay.hpp"
 #include "tests/TestTemplatePingPong.hpp"
 #include "Executor.hpp"
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     app.add_option("-o, --output",
         config.output,
         "Directory at which the report should be written. Each test case will output a csv file "
-        "with the name of the test case. Ex: <output>/MXLHost2Host+Verbs+Reflect+Wait.csv");
+        "with the name of the test case. Ex: <output>/MXLFabrics+Host2Host+Verbs+Reflect+Wait.csv");
     app.add_option("-g, --gpu", config.gpu, "Id of the gpu that should be used");
     app.add_option("-r, --run",
         config.run,
@@ -64,26 +64,26 @@ int main(int argc, char** argv)
         fp::Executor runner{std::move(config)};
 
         // clang-format off
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+Verbs+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Host+TCP+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+Verbs+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+Verbs+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+Verbs+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Cuda+SHM+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLHost2Cuda+SHM+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Host+SHM+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Host+SHM+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+SHM+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+SHM+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+SHM+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::MXLHost2Host<"MXLCuda2Cuda+SHM+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+Verbs+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+Verbs+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+Verbs+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+TCP+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+TCP+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+TCP+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Host+TCP+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_TCP,MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+Verbs+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+Verbs+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+Verbs+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+Verbs+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_VERBS, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Cuda+SHM+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Host2Cuda+SHM+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Host+SHM+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Host+SHM+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+SHM+Oneway+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+SHM+Oneway+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+SHM+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::MXLFabrics<"MXLFabrics+Cuda2Cuda+SHM+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_SHARING_PROVIDER_SHM, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::OneWayTest>();
         runner.add<fp::PingPongTest>();
         //clang-format on
