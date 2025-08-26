@@ -43,6 +43,11 @@ namespace riedel::fabricsperf
             MXLFabricsFactory<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>;
         constexpr static int numWarmupIterations = 200;
 
+        bool needsReflector() const noexcept final
+        {
+            return true;
+        }
+
         bool runInitiator(TestContext const& ctx)
         {
             mxlStatus status;

@@ -8,15 +8,21 @@
 #include <mxl/flow.h>
 #include <mxl/mxl.h>
 #include "Rate.hpp"
+#include "Region.hpp"
 
 namespace riedel::fabricsperf
 {
+    namespace ofi = mxl::lib::fabrics::ofi;
+
     struct RegionsDeleter
     {
         void operator()(mxlRegions_t*) const;
     };
 
     using MxlRegions = std::unique_ptr<mxlRegions_t, RegionsDeleter>;
+
+    std::tuple<std::uintptr_t, std::size_t, ofi::Region::Location> grainData(MxlRegions& regions,
+        uint64_t index);
 
     class FlowSetup
     {
@@ -38,6 +44,7 @@ namespace riedel::fabricsperf
 
         MxlRegions getCudaWriterRegions(std::uint64_t deviceId);
         MxlRegions getCudaReaderRegions(std::uint64_t deviceId);
+
         mxlInstance instance() noexcept;
         RateTimer createRateTimer() noexcept;
 

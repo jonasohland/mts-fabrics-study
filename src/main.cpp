@@ -4,6 +4,7 @@
 #include "mxl/fabrics.h"
 #include "tests/MXLFabrics.hpp"
 #include "tests/MXLSHM.hpp"
+#include "tests/NativeCuda.hpp"
 #include "tests/TestTemplateOneWay.hpp"
 #include "tests/TestTemplatePingPong.hpp"
 #include "Executor.hpp"
@@ -93,6 +94,8 @@ int main(int argc, char** argv)
         runner.add<fp::MXLSHM<"MXLSHM+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT>>();
         runner.add<fp::MXLSHM<"MXLSHM+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN>>();
         runner.add<fp::MXLSHM<"MXLSHM+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT>>();
+        runner.add<fp::NativeCuda<"NativeCuda+Host2Device", MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::NativeCuda<"NativeCuda+Device2Host", MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
         runner.add<fp::OneWayTest>();
         runner.add<fp::PingPongTest>();
         //clang-format on

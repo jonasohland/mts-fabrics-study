@@ -21,7 +21,7 @@ namespace riedel::fabricsperf
         }
 
         // Append the CSV header
-        writer.write_row(std::vector<std::string>{"RoundTrip", "TxTime", "RxTime"});
+        writer.write_row(std::vector<std::string>{"Timers", "TxTime", "RxTime"});
 
         // Append each samples
         for (size_t i = 0; i < nbSamples; i++)

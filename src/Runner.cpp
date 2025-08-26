@@ -31,13 +31,23 @@ namespace riedel::fabricsperf
         pullRemoteTargetInfo();
 
         _test->setup(*this);
-        _test->onRemoteEndpointAvailable(*this, *_remoteTargetInfo);
+
+        if (_test->needsReflector())
+        {
+            _test->onRemoteEndpointAvailable(*this, *_remoteTargetInfo);
+        }
+
         _test->run(*this);
         _test->teardown(*this);
     }
 
     void Runner::createRemoteFlowSetup()
     {
+        if (!_test->needsReflector())
+        {
+            return;
+        }
+
         picojson::value v{};
 
         if (auto err = picojson::parse(v, _config.flowConfig()); !err.empty())
@@ -78,6 +88,11 @@ namespace riedel::fabricsperf
 
     void Runner::initRemoteTest()
     {
+        if (!_test->needsReflector())
+        {
+            return;
+        }
+
         auto result = _client.Post(
             "/init", fmt::format("{},{}", _testName, _config.iterations), "text/plain");
         if (auto err = result.error(); err != http::Error::Success)
@@ -94,6 +109,13 @@ namespace riedel::fabricsperf
 
     void Runner::pullRemoteTargetInfo()
     {
+        if (!_test->needsReflector())
+        {
+            _remoteTargetInfo = "No reflector available for this test";
+
+            return;
+        }
+
         auto result = _client.Get("/target-info");
         if (auto err = result.error(); err != http::Error::Success)
         {
@@ -118,6 +140,11 @@ namespace riedel::fabricsperf
 
     void Runner::setLocalTargetInfo(std::string info)
     {
+        if (!_test->needsReflector())
+        {
+            return;
+        }
+
         auto result = _client.Post("/target-info", info, "application/json");
         if (auto err = result.error(); err != http::Error::Success)
         {
@@ -144,6 +171,11 @@ namespace riedel::fabricsperf
 
     bool Runner::remoteIsReady()
     {
+        if (!_test->needsReflector())
+        {
+            return true;
+        }
+
         if (_localIsReady)
         {
             http::Result result;
@@ -173,19 +205,27 @@ namespace riedel::fabricsperf
         std::vector<std::string> localTimeRecords{};
         std::vector<std::string> remoteTimeRecords{};
 
-        csv::Reader reader;
-        auto result = _client.Get("/time-records");
-        if (auto err = result.error(); err != http::Error::Success)
+        if (_test->needsReflector())
         {
-            throw std::runtime_error(
-                std::format("failed to get remote time records: {}", http::to_string(err)));
-        }
+            csv::Reader reader;
+            auto result = _client.Get("/time-records");
+            if (auto err = result.error(); err != http::Error::Success)
+            {
+                throw std::runtime_error(
+                    std::format("failed to get remote time records: {}", http::to_string(err)));
+            }
 
-        reader.parse(result->body);
-        for (auto const& val : *reader.begin())
+            reader.parse(result->body);
+            for (auto const& val : *reader.begin())
+            {
+                // this hurts
+                val.read_value(remoteTimeRecords.emplace_back());
+            }
+        }
+        else
         {
-            // this hurts
-            val.read_value(remoteTimeRecords.emplace_back());
+            auto fillVal = std::to_string(std::numeric_limits<uint64_t>::max());
+            remoteTimeRecords.resize(ilocalTimeRecords.size(), fillVal);
         }
 
         std::transform(itimers.begin(),

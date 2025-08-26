@@ -7,9 +7,27 @@
 #include <mxl/mxl.h>
 #include "../mxl/lib/src/internal/FlowParser.hpp"
 #include "internal/Logging.hpp"
+#include "Region.hpp"
 
 namespace riedel::fabricsperf
 {
+
+    std::tuple<std::uintptr_t, std::size_t, ofi::Region::Location> grainData(MxlRegions& mxlRegions,
+        uint64_t index)
+    {
+        auto regionGroups = reinterpret_cast<ofi::RegionGroups*>(mxlRegions.get());
+        auto regions = regionGroups->view();
+        auto regionGroup = regions[index % regions.size()];
+        auto groups = regionGroup.view();
+
+        if (groups.size() != 1)
+        {
+            throw std::runtime_error("unexpected regions groups count");
+        }
+
+        return {groups[0].base, groups[0].size, groups[0].loc};
+    }
+
     void RegionsDeleter::operator()(mxlRegions_t* regions) const
     {
         mxlFabricsRegionsFree(regions);
@@ -224,4 +242,5 @@ namespace riedel::fabricsperf
     {
         return {_flowInfo.discrete.grainRate.numerator, _flowInfo.discrete.grainRate.denominator};
     }
+
 }

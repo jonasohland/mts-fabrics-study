@@ -15,6 +15,11 @@ namespace riedel::fabricsperf
     public:
         using Factory = PingPongTestFactory;
 
+        bool needsReflector() const noexcept final
+        {
+            return true;
+        }
+
         void setup(TestContext& ctx) final
         {
             MXL_INFO("Setting up test.");

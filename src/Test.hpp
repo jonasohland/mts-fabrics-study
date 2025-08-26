@@ -72,6 +72,7 @@ namespace riedel::fabricsperf
         virtual void teardown(TestContext& ctx) = 0;
         virtual void run(TestContext& ctx) = 0;
         virtual void onRemoteEndpointAvailable(TestContext& ctx, std::string info) = 0;
+        virtual bool needsReflector() const = 0;
     };
 
     class TestFactory

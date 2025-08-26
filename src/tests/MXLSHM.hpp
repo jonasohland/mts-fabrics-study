@@ -33,6 +33,11 @@ namespace riedel::fabricsperf
     public:
         using Factory = MXLSHMFactory<Name, TM, PM>;
 
+        bool needsReflector() const noexcept final
+        {
+            return true;
+        }
+
         void onRemoteEndpointAvailable(TestContext&, std::string info) final
         {
             _remoteFlowId = info;
@@ -82,13 +87,10 @@ namespace riedel::fabricsperf
             if (ctx.runner())
             {
                 runner(ctx);
-                return;
             }
-
-            if (ctx.reflector())
+            else if (ctx.reflector())
             {
                 reflector(ctx);
-                return;
             }
         }
 

@@ -13,6 +13,11 @@ namespace riedel::fabricsperf
     class OneWayTest : public Test
     {
     public:
+        bool needsReflector() const noexcept final
+        {
+            return true;
+        }
+
         void setup(TestContext& ctx) final
         {
             MXL_INFO("Setting up test.");
