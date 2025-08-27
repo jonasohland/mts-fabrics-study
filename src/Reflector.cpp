@@ -19,12 +19,31 @@ namespace riedel::fabricsperf
     void Reflector::run()
     {
         _srv.Post("/init",
-            [this](http::Request const& req, http::Response&) { initTest(req.body); });
-        _srv.Post("/flow-def",
-            [this](http::Request const& req, http::Response&)
+            [this](http::Request const& req, http::Response& res)
             {
-                reset(0);
-                resetFlows(req.body);
+                try
+                {
+                    initTest(req.body);
+                }
+                catch (std::exception& ex)
+                {
+                    res.status = 500;
+                    res.body = ex.what();
+                }
+            });
+        _srv.Post("/flow-def",
+            [this](http::Request const& req, http::Response& res)
+            {
+                try
+                {
+                    reset(0);
+                    resetFlows(req.body);
+                }
+                catch (std::exception& ex)
+                {
+                    res.status = 500;
+                    res.body = ex.what();
+                }
             });
         _srv.Post("/target-info",
             [this](http::Request const& req, http::Response&) { onRemoteTargetInfo(req.body); });

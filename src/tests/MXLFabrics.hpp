@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <thread>
+#include <cuda_runtime.h>
 #include <mxl/fabrics.h>
 #include "../Defer.hpp"
 #include "../ScopedGPUMaxClocks.hpp"
@@ -13,19 +14,26 @@
 
 namespace riedel::fabricsperf
 {
+    enum class ExtraCopyMode
+    {
+        NoExtraCopy,
+        ExtraCopy
+    };
+
     template<StaticString, TransferMode, PollMode, mxlFabricsProvider, mxlFabricsMemoryRegionType,
-        mxlFabricsMemoryRegionType>
+        mxlFabricsMemoryRegionType, ExtraCopyMode extraCopy = ExtraCopyMode::NoExtraCopy>
     class MXLFabrics;
 
     template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider,
-        mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation>
+        mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation,
+        ExtraCopyMode ExtraCopy = ExtraCopyMode::NoExtraCopy>
     class MXLFabricsFactory : public TestFactory
     {
     public:
         std::unique_ptr<Test> operator()() const final
         {
             return std::make_unique<
-                MXLFabrics<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>>();
+                MXLFabrics<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation, ExtraCopy>>();
         }
 
         [[nodiscard]]
@@ -36,12 +44,13 @@ namespace riedel::fabricsperf
     };
 
     template<StaticString Name, TransferMode TM, PollMode Poll, mxlFabricsProvider Provider,
-        mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation>
+        mxlFabricsMemoryRegionType InitiatorLocation, mxlFabricsMemoryRegionType TargetLocation,
+        ExtraCopyMode ExtraCopy>
     class MXLFabrics : public Test
     {
     public:
-        using Factory =
-            MXLFabricsFactory<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>;
+        using Factory = MXLFabricsFactory<Name, TM, Poll, Provider, InitiatorLocation,
+            TargetLocation, ExtraCopy>;
         constexpr static int numWarmupIterations = 200;
 
         [[nodiscard]]
@@ -135,6 +144,40 @@ namespace riedel::fabricsperf
             return index;
         }
 
+        void doExtraTransferAfter(uint64_t index)
+        {
+            auto const& [buf, size, log] =
+                (*_localGrainRegions)[index % _localGrainRegions->size()];
+
+            auto status = cudaMemcpy(_extraBuf,
+                reinterpret_cast<void*>(buf),
+                std::max(_extraBufSize, size),
+                cudaMemcpyHostToDevice);
+
+            if (status != cudaSuccess)
+            {
+                throw std::runtime_error(
+                    fmt::format("failed to copy grain to device: {}", cudaGetErrorName(status)));
+            }
+        }
+
+        void doExtraTransferBefore(uint64_t index)
+        {
+            auto const& [buf, size, log] =
+                (*_localGrainRegions)[index % _localGrainRegions->size()];
+
+            auto status = cudaMemcpy(reinterpret_cast<void*>(buf),
+                _extraBuf,
+                std::max(_extraBufSize, size),
+                cudaMemcpyDeviceToHost);
+
+            if (status != cudaSuccess)
+            {
+                throw std::runtime_error(
+                    fmt::format("failed to copy grain from device: {}", cudaGetErrorName(status)));
+            }
+        }
+
         void setup(TestContext& ctx) override
         {
             if (mxlFabricsCreateInstance(ctx.flows().instance(), &_instance) != MXL_STATUS_OK)
@@ -210,6 +253,35 @@ namespace riedel::fabricsperf
             }
 
             ctx.setLocalTargetInfo(std::string{targetInfoBuf.data(), targetInfoBuf.size() - 1});
+
+            if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
+            {
+                auto regions = ctx.flows().getWriterRegions();
+                _localGrainRegions = grainRegions(regions);
+
+                for (auto const& region : *_localGrainRegions)
+                {
+                    auto const& [buf, size, loc] = region;
+
+                    MXL_INFO(
+                        "register host grain region to device: [at 0x{:x}, size: {}]", buf, size);
+
+                    if (auto status = cudaHostRegister(reinterpret_cast<void*>(buf), size, 0);
+                        status != cudaSuccess)
+                    {
+                        throw std::runtime_error(fmt::format(
+                            "failed to register host grain region: {}", cudaGetErrorName(status)));
+                    }
+                }
+
+                auto extraRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
+                auto [buf, size, loc] = grainRegion(extraRegions, 0);
+
+                assert(loc.iface() == FI_HMEM_CUDA);
+
+                _extraBuf = reinterpret_cast<void*>(buf);
+                _extraBufSize = size;
+            }
         }
 
         void teardown(TestContext&) override
@@ -235,6 +307,20 @@ namespace riedel::fabricsperf
                 if (mxlFabricsDestroyInstance(_instance) != MXL_STATUS_OK)
                 {
                     MXL_ERROR("Failed to destroy instance");
+                }
+            }
+
+            if (_localGrainRegions)
+            {
+                for (auto const& region : *_localGrainRegions)
+                {
+                    auto const& [buf, size, loc] = region;
+                    if (auto status = cudaHostUnregister(reinterpret_cast<void*>(buf));
+                        status != cudaSuccess)
+                    {
+                        MXL_ERROR("failed to unregister host memory region from device: {}",
+                            cudaGetErrorName(status));
+                    }
                 }
             }
         }
@@ -357,6 +443,11 @@ namespace riedel::fabricsperf
                     }
                 }
 
+                if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
+                {
+                    doExtraTransferBefore(index);
+                }
+
                 for (;;)
                 {
                     status = mxlFabricsInitiatorTransferGrain(_in, index);
@@ -395,6 +486,11 @@ namespace riedel::fabricsperf
                     return;
                 }
 
+                if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
+                {
+                    doExtraTransferAfter(index);
+                }
+
                 if (i >= 0)
                 {
                     ctx.timerStop(index);
@@ -417,6 +513,11 @@ namespace riedel::fabricsperf
                     return;
                 }
 
+                if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
+                {
+                    doExtraTransferAfter(index);
+                }
+
                 if (counter >= numWarmupIterations)
                 {
                     ctx.recordCurrentTime(index);
@@ -427,6 +528,11 @@ namespace riedel::fabricsperf
                 {
                     ++counter;
                     continue;
+                }
+
+                if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
+                {
+                    doExtraTransferBefore(index);
                 }
 
                 for (;;)
@@ -462,9 +568,9 @@ namespace riedel::fabricsperf
             }
         }
 
-        MxlRegions getReaderRegions(TestContext& ctx)
+        MXLRegions getReaderRegions(TestContext& ctx)
         {
-            MxlRegions regions;
+            MXLRegions regions;
             if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_HOST)
             {
                 regions = ctx.flows().getReaderRegions();
@@ -481,9 +587,9 @@ namespace riedel::fabricsperf
             return regions;
         }
 
-        MxlRegions getWriterRegions(TestContext& ctx)
+        MXLRegions getWriterRegions(TestContext& ctx)
         {
-            MxlRegions regions;
+            MXLRegions regions;
             if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_HOST)
             {
                 regions = ctx.flows().getWriterRegions();
@@ -505,5 +611,10 @@ namespace riedel::fabricsperf
         mxlFabricsTarget _tg;
         std::optional<RateTimer> _rt;
         std::optional<std::string> _remoteEndpointInfo;
+
+        // Only used when there is an extra simulated cuda copy
+        std::optional<std::vector<MXLGrainRegion>> _localGrainRegions;
+        std::size_t _extraBufSize;
+        void* _extraBuf;
     };
 }

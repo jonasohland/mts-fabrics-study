@@ -12,20 +12,38 @@
 namespace riedel::fabricsperf
 {
 
-    std::tuple<std::uintptr_t, std::size_t, ofi::Region::Location> grainData(MxlRegions& mxlRegions,
-        uint64_t index)
+    MXLGrainRegion grainRegion(MXLRegions& mxlRegions, uint64_t index)
     {
         auto regionGroups = reinterpret_cast<ofi::RegionGroups*>(mxlRegions.get());
-        auto regions = regionGroups->view();
-        auto regionGroup = regions[index % regions.size()];
-        auto groups = regionGroup.view();
+        auto regionGroupsVec = regionGroups->view();
+        auto regionGroup = regionGroupsVec[index % regionGroupsVec.size()];
+        auto regions = regionGroup.view();
 
-        if (groups.size() != 1)
+        if (regions.size() != 1)
         {
             throw std::runtime_error("unexpected regions groups count");
         }
 
-        return {groups[0].base, groups[0].size, groups[0].loc};
+        return {regions[0].base, regions[0].size, regions[0].loc};
+    }
+
+    std::vector<MXLGrainRegion> grainRegions(MXLRegions& mxlRegions)
+    {
+        std::vector<MXLGrainRegion> out{};
+        auto regionGroups = reinterpret_cast<ofi::RegionGroups*>(mxlRegions.get());
+
+        for (auto const& rgroup : regionGroups->view())
+        {
+            auto vec = rgroup.view();
+            if (vec.size() != 1)
+            {
+                throw std::runtime_error("encountered a region group with more than 1 region");
+            }
+
+            out.emplace_back(vec[0].base, vec[0].size, vec[0].loc);
+        }
+
+        return out;
     }
 
     void RegionsDeleter::operator()(mxlRegions_t* regions) const
@@ -169,7 +187,7 @@ namespace riedel::fabricsperf
         return _fw;
     }
 
-    MxlRegions FlowSetup::getWriterRegions()
+    MXLRegions FlowSetup::getWriterRegions()
     {
         mxlRegions regions;
         if (mxlFabricsRegionsForFlowWriter(_fw, &regions) != MXL_STATUS_OK)
@@ -177,10 +195,10 @@ namespace riedel::fabricsperf
             throw std::runtime_error("failed to get regions from flow data");
         }
 
-        return MxlRegions{regions, RegionsDeleter{}};
+        return MXLRegions{regions, RegionsDeleter{}};
     }
 
-    MxlRegions FlowSetup::getReaderRegions()
+    MXLRegions FlowSetup::getReaderRegions()
     {
         mxlRegions regions;
         if (mxlFabricsRegionsForFlowReader(_fr, &regions) != MXL_STATUS_OK)
@@ -188,49 +206,57 @@ namespace riedel::fabricsperf
             throw std::runtime_error("failed to get regions from flow data");
         }
 
-        return MxlRegions{regions, RegionsDeleter{}};
+        return MXLRegions{regions, RegionsDeleter{}};
     }
 
-    MxlRegions FlowSetup::getCudaWriterRegions(std::uint64_t deviceId)
+    MXLRegions FlowSetup::getCudaWriterRegions(std::uint64_t deviceId)
     {
         return getCudaRegions(deviceId, &_cudaWriterBuf);
     }
 
-    MxlRegions FlowSetup::getCudaReaderRegions(std::uint64_t deviceId)
+    MXLRegions FlowSetup::getCudaReaderRegions(std::uint64_t deviceId)
     {
         return getCudaRegions(deviceId, &_cudaReaderBuf);
     }
 
-    MxlRegions FlowSetup::getCudaRegions(std::uint64_t deviceId, void** cudaBuf)
+    MXLRegions makeCudaRegion(void* buf, std::size_t size, uint64_t deviceId)
     {
+        mxlFabricsMemoryRegion region{
+            reinterpret_cast<std::uintptr_t>(buf), size, {MXL_MEMORY_REGION_TYPE_CUDA, deviceId}
+        };
+
+        mxlRegions regions;
+        mxlFabricsMemoryRegionGroup group{&region, 1};
+        if (mxlFabricsRegionsFromBufferGroups(&group, 1, &regions))
+        {
+            throw std::runtime_error("failed to create mxl regions from cuda region groups");
+        }
+
+        return MXLRegions{regions, RegionsDeleter{}};
+    }
+
+    MXLRegions FlowSetup::getCudaRegions(std::uint64_t deviceId, void** cudaBuf)
+    {
+        if (*cudaBuf != nullptr)
+        {
+            return makeCudaRegion(*cudaBuf, _cudaBufSize, _cudaDevice);
+        }
+
         mxl::lib::FlowParser descriptorParser{_flowConfig};
-        size_t cudaBufSize = descriptorParser.getPayloadSize() + 8192; // 8192 is the header size.
+        _cudaBufSize = descriptorParser.getPayloadSize() + 8192; // 8192 is the header size.
 
         if (cudaSetDevice(deviceId) != cudaSuccess)
         {
             throw std::runtime_error("failed to select cuda device");
         }
 
-        mxlRegions regions;
-        if (cudaMalloc(cudaBuf, cudaBufSize) != cudaSuccess)
+        _cudaDevice = deviceId;
+        if (cudaMalloc(cudaBuf, _cudaBufSize) != cudaSuccess)
         {
             throw std::runtime_error("failed to allocate cuda region");
         }
 
-        mxlFabricsMemoryRegion region{
-            reinterpret_cast<std::uintptr_t>(*cudaBuf),
-            cudaBufSize,
-            {MXL_MEMORY_REGION_TYPE_CUDA, deviceId}
-        };
-
-        mxlFabricsMemoryRegionGroup group{&region, 1};
-
-        if (mxlFabricsRegionsFromBufferGroups(&group, 1, &regions))
-        {
-            throw std::runtime_error("failed to create mxl regions from cuda region groups");
-        }
-
-        return MxlRegions{regions, RegionsDeleter{}};
+        return makeCudaRegion(*cudaBuf, _cudaBufSize, deviceId);
     }
 
     mxlInstance FlowSetup::instance() noexcept

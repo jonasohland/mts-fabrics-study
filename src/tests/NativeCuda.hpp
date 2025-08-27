@@ -49,8 +49,8 @@ namespace riedel::fabricsperf
             _cudaRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
             _hostRegions = ctx.flows().getWriterRegions();
 
-            auto [cudaGrainPtr, cudaGrainSize, cuaLoc] = grainData(*_cudaRegions, 0);
-            auto [hostGrainPtr, hostGrainSize, hostLoc] = grainData(*_hostRegions, 0);
+            auto [cudaGrainPtr, cudaGrainSize, cuaLoc] = grainRegion(*_cudaRegions, 0);
+            auto [hostGrainPtr, hostGrainSize, hostLoc] = grainRegion(*_hostRegions, 0);
 
             if (auto status = cudaHostRegister(
                     reinterpret_cast<void*>(hostGrainPtr), hostGrainSize, 0);
@@ -137,8 +137,8 @@ namespace riedel::fabricsperf
         cudaMemcpyKind _kind;
         std::size_t _size;
 
-        std::optional<MxlRegions> _cudaRegions;
-        std::optional<MxlRegions> _hostRegions;
+        std::optional<MXLRegions> _cudaRegions;
+        std::optional<MXLRegions> _hostRegions;
 
     private:
     };

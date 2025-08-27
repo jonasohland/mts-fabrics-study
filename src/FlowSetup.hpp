@@ -19,10 +19,12 @@ namespace riedel::fabricsperf
         void operator()(mxlRegions_t*) const;
     };
 
-    using MxlRegions = std::unique_ptr<mxlRegions_t, RegionsDeleter>;
+    using MXLRegions = std::unique_ptr<mxlRegions_t, RegionsDeleter>;
 
-    std::tuple<std::uintptr_t, std::size_t, ofi::Region::Location> grainData(MxlRegions& regions,
-        uint64_t index);
+    using MXLGrainRegion = std::tuple<std::uintptr_t, std::size_t, ofi::Region::Location>;
+
+    MXLGrainRegion grainRegion(MXLRegions& regions, uint64_t index);
+    std::vector<MXLGrainRegion> grainRegions(MXLRegions& regions);
 
     class FlowSetup
     {
@@ -39,22 +41,24 @@ namespace riedel::fabricsperf
         mxlFlowReader reader() noexcept;
         mxlFlowWriter writer() noexcept;
 
-        MxlRegions getWriterRegions();
-        MxlRegions getReaderRegions();
+        MXLRegions getWriterRegions();
+        MXLRegions getReaderRegions();
 
-        MxlRegions getCudaWriterRegions(std::uint64_t deviceId);
-        MxlRegions getCudaReaderRegions(std::uint64_t deviceId);
+        MXLRegions getCudaWriterRegions(std::uint64_t deviceId);
+        MXLRegions getCudaReaderRegions(std::uint64_t deviceId);
 
         mxlInstance instance() noexcept;
         RateTimer createRateTimer() noexcept;
 
     private:
-        MxlRegions getCudaRegions(std::uint64_t deviceId, void** cudaBuf);
+        MXLRegions getCudaRegions(std::uint64_t deviceId, void** cudaBuf);
 
         mxlInstance _mxl{nullptr};
         mxlFlowReader _fr{nullptr};
         mxlFlowWriter _fw{nullptr};
 
+        uint64_t _cudaDevice = 0;
+        std::size_t _cudaBufSize = 0;
         void* _cudaWriterBuf{nullptr};
         void* _cudaReaderBuf{nullptr};
 
