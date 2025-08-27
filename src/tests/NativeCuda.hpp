@@ -2,6 +2,7 @@
 
 #include <cuda_runtime.h>
 #include <mxl/fabrics.h>
+#include "../ScopedGPUMaxClocks.hpp"
 #include "../StaticString.hpp"
 #include "../Test.hpp"
 #include "internal/Logging.hpp"
@@ -90,6 +91,8 @@ namespace riedel::fabricsperf
 
         void run(TestContext& ctx) final
         {
+            ScopedGPUMaxClocks clocks{static_cast<int>(ctx.config().gpu)};
+
             auto rate = ctx.flows().createRateTimer();
             auto index = 0;
 

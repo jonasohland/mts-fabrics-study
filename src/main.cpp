@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     CLI::App app{};
 
     fp::Config config = {
-        .runner = false,
+        .runner = true,
         .reflector = false,
         .listen = "",
         .connect = "",

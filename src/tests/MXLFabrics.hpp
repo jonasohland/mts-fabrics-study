@@ -4,6 +4,7 @@
 #include <thread>
 #include <mxl/fabrics.h>
 #include "../Defer.hpp"
+#include "../ScopedGPUMaxClocks.hpp"
 #include "../StaticString.hpp"
 #include "../Test.hpp"
 #include "internal/Logging.hpp"
@@ -43,6 +44,14 @@ namespace riedel::fabricsperf
             MXLFabricsFactory<Name, TM, Poll, Provider, InitiatorLocation, TargetLocation>;
         constexpr static int numWarmupIterations = 200;
 
+        [[nodiscard]]
+        bool needsGPU(TestContext const& ctx) const noexcept
+        {
+            return (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
+                   (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector());
+        }
+
+        [[nodiscard]]
         bool needsReflector() const noexcept final
         {
             return true;
@@ -232,6 +241,12 @@ namespace riedel::fabricsperf
 
         void run(TestContext& ctx) override
         {
+            std::optional<ScopedGPUMaxClocks> gpuClocksLock;
+            if (needsGPU(ctx))
+            {
+                gpuClocksLock.emplace(static_cast<int>(ctx.config().gpu));
+            }
+
             while (!_remoteEndpointInfo)
             {
                 if (ctx.interrupted())

@@ -35,6 +35,7 @@ add_executable(
     "src/Executor.cpp"
     "src/Reflector.cpp"
     "src/Runner.cpp"
+    "src/ScopedGPUMaxClocks.cpp"
 )
 
 set_target_properties(
@@ -53,6 +54,7 @@ target_link_libraries(
     stduuid
     PkgConfig::csv2
     CUDA::cudart
+    CUDA::nvml
 )
 
 target_include_directories(
