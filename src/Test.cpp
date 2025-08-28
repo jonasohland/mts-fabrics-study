@@ -10,7 +10,50 @@ namespace riedel::fabricsperf
         , _timeRecords(config.iterations)
         , _isRunner(config.mode() == Mode::RUNNER)
         , _config(config)
-    {}
+    {
+        _perfRecorder.addEvent("context_switches",
+            PERF_TYPE_SOFTWARE,
+            PERF_COUNT_SW_CONTEXT_SWITCHES,
+            PerfRecorder::Filter::None);
+
+        _perfRecorder.addEvent("cycles_user",
+            PERF_TYPE_HARDWARE,
+            PERF_COUNT_HW_CPU_CYCLES,
+            PerfRecorder::Filter::User);
+        _perfRecorder.addEvent("cycles_kernel",
+            PERF_TYPE_HARDWARE,
+            PERF_COUNT_HW_CPU_CYCLES,
+            PerfRecorder::Filter::Kernel);
+
+        _perfRecorder.addEvent("instructions_user",
+            PERF_TYPE_HARDWARE,
+            PERF_COUNT_HW_INSTRUCTIONS,
+            PerfRecorder::Filter::User);
+        _perfRecorder.addEvent("instructions_kernel",
+            PERF_TYPE_HARDWARE,
+            PERF_COUNT_HW_INSTRUCTIONS,
+            PerfRecorder::Filter::Kernel);
+
+        _perfRecorder.addEvent("cpu_clock_user",
+            PERF_TYPE_SOFTWARE,
+            PERF_COUNT_SW_CPU_CLOCK,
+            PerfRecorder::Filter::User);
+        _perfRecorder.addEvent("cpu_clock_kernel",
+            PERF_TYPE_SOFTWARE,
+            PERF_COUNT_SW_CPU_CLOCK,
+            PerfRecorder::Filter::Kernel);
+
+        _perfRecorder.addEvent("task_clock_user",
+            PERF_TYPE_SOFTWARE,
+            PERF_COUNT_SW_TASK_CLOCK,
+            PerfRecorder::Filter::User);
+        _perfRecorder.addEvent("task_clock_kernel",
+            PERF_TYPE_SOFTWARE,
+            PERF_COUNT_SW_TASK_CLOCK,
+            PerfRecorder::Filter::Kernel);
+
+        _perfRecorder.start();
+    }
 
     TestContext::~TestContext()
     {
@@ -63,6 +106,16 @@ namespace riedel::fabricsperf
         _timeRecords[tindex] = now;
     }
 
+    void TestContext::startPerfRecorder()
+    {
+        _perfRecorder.start();
+    }
+
+    void TestContext::stopPerfRecorder()
+    {
+        _perfRecorder.stop();
+    }
+
     std::vector<std::uint64_t> TestContext::exportTimeRecords() const
     {
         std::vector<std::uint64_t> out(_timeRecords.size());
@@ -101,6 +154,11 @@ namespace riedel::fabricsperf
             });
 
         return out;
+    }
+
+    std::vector<std::pair<std::string, std::string>> TestContext::exportPerfCounters()
+    {
+        return _perfRecorder.exportCounters();
     }
 
     void TestContext::resetTimers(std::size_t iterations) noexcept

@@ -7,6 +7,7 @@
 #include <mxl/mxl.h>
 #include "Config.hpp"
 #include "FlowSetup.hpp"
+#include "Perf.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -29,6 +30,8 @@ namespace riedel::fabricsperf
         void timerStart(uint64_t index);
         void timerStop(uint64_t index);
         void recordCurrentTime(uint64_t index);
+        void startPerfRecorder();
+        void stopPerfRecorder();
 
         [[nodiscard]]
         bool reflector() const noexcept;
@@ -40,6 +43,7 @@ namespace riedel::fabricsperf
         void resetTimers(std::size_t iterations) noexcept;
         std::vector<std::uint64_t> exportTimeRecords() const;
         std::vector<std::uint64_t> exportTimers() const;
+        std::vector<std::pair<std::string, std::string>> exportPerfCounters();
 
     protected:
         void resetFlows(std::string const& flowDef);
@@ -58,6 +62,7 @@ namespace riedel::fabricsperf
         std::vector<std::optional<std::chrono::system_clock::time_point>> _timeRecords;
         uint64_t _timerIndexOffset = std::numeric_limits<uint64_t>::max();
 
+        PerfRecorder _perfRecorder{};
         std::optional<FlowSetup> _flows{};
         bool _isRunner;
         Config const& _config;

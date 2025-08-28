@@ -189,6 +189,11 @@ namespace riedel::fabricsperf
                     return;
                 }
 
+                if (index == 20)
+                {
+                    ctx.startPerfRecorder();
+                }
+
                 if (index >= 20)
                 {
                     ctx.recordCurrentTime(index);
@@ -216,6 +221,8 @@ namespace riedel::fabricsperf
 
                 ++index;
             }
+
+            ctx.stopPerfRecorder();
         }
 
         uint64_t readGrainFromRemote(TestContext& ctx, uint64_t index)

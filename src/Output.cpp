@@ -30,7 +30,7 @@ namespace riedel::fabricsperf
         }
     }
 
-    void writeResults(std::string const& directory, Results results)
+    void writeResults(std::string const& directory, Results const& results)
     {
         std::filesystem::create_directories(directory);
 
@@ -44,4 +44,36 @@ namespace riedel::fabricsperf
             writeTestResults(csvw, testResults);
         }
     }
+
+    void writePerfCounter(std::string const& directory, std::string const& testName,
+        std::vector<std::pair<std::string, std::string>> const& counters)
+    {
+        std::filesystem::create_directories(directory);
+        std::ofstream ofs{directory + "/" + testName + ".perf.csv"};
+        csv::Writer csvw{ofs};
+
+        std::vector<std::string> titles{};
+        std::vector<std::string> values{};
+
+        std::transform(counters.begin(),
+            counters.end(),
+            std::back_inserter(titles),
+            [](auto const& item) { return item.first; });
+        std::transform(counters.begin(),
+            counters.end(),
+            std::back_inserter(values),
+            [](auto const& item) { return item.second; });
+
+        csvw.write_row(titles);
+        csvw.write_row(values);
+    }
+
+    void writePerfCounters(std::string const& directory, PerfCounters const& counters)
+    {
+        for (auto const& [name, counters] : counters)
+        {
+            writePerfCounter(directory, name, counters);
+        }
+    }
+
 }

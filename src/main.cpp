@@ -1,4 +1,5 @@
 #include <CLI/CLI.hpp>
+#include <linux/perf_event.h>
 #include <mxl/mxl.h>
 #include "internal/Logging.hpp"
 #include "mxl/fabrics.h"
@@ -8,6 +9,7 @@
 #include "tests/TestTemplateOneWay.hpp"
 #include "tests/TestTemplatePingPong.hpp"
 #include "Executor.hpp"
+#include "Perf.hpp"
 
 namespace fp = riedel::fabricsperf;
 

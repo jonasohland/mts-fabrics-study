@@ -109,6 +109,7 @@ namespace riedel::fabricsperf
                 }
                 if (i == 0)
                 {
+                    ctx.startPerfRecorder();
                     MXL_INFO("warmup complete");
                 }
 
@@ -130,6 +131,8 @@ namespace riedel::fabricsperf
 
                 ++index;
             }
+
+            ctx.stopPerfRecorder();
         }
 
         void* _src;
