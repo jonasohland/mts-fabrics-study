@@ -40,6 +40,7 @@ namespace riedel::fabricsperf
     void Executor::runner()
     {
         Results results;
+        PerfCounters counters;
 
         for (auto const& testCase : _config.run)
         {
@@ -53,12 +54,14 @@ namespace riedel::fabricsperf
             _inner->run();
 
             results.emplace_back(testCase, dynamic_cast<Runner&>(*_inner).exportResults());
+            counters.emplace(testCase, dynamic_cast<Runner&>(*_inner).exportPerfCounters());
 
             _inner.reset(); // Destroy the previous Runner and all its child when we are done with
                             // them.
         }
 
-        writeResults(_config.output, std::move(results));
+        writeResults(_config.output, results);
+        writePerfCounters(_config.output, counters);
     }
 
     void Executor::reflector()
