@@ -15,7 +15,7 @@ namespace riedel::fabricsperf
 #ifdef MXL_FABRICS_NATIVE
     namespace fabrics = mxl::lib::fabrics::rdma_core;
 #elif MXL_FABRICS_OFI
-    namespace ofi = mxl::lib::fabrics::ofi;
+    namespace fabrics = mxl::lib::fabrics::ofi;
 #endif
 
     struct RegionsDeleter
