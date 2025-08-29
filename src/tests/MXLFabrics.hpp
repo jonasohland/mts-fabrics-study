@@ -254,7 +254,7 @@ namespace riedel::fabricsperf
 
             ctx.setLocalTargetInfo(std::string{targetInfoBuf.data(), targetInfoBuf.size() - 1});
 
-            if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
+            if (needsGPU(ctx) || ExtraCopy == ExtraCopyMode::ExtraCopy)
             {
                 auto regions = ctx.flows().getWriterRegions();
                 _localGrainRegions = grainRegions(regions);
@@ -273,7 +273,10 @@ namespace riedel::fabricsperf
                             "failed to register host grain region: {}", cudaGetErrorName(status)));
                     }
                 }
+            }
 
+            if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
+            {
                 auto extraRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
                 auto [buf, size, loc] = grainRegion(extraRegions, 0);
 
