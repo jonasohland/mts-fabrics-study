@@ -35,6 +35,7 @@ add_executable(
     "src/Executor.cpp"
     "src/Reflector.cpp"
     "src/Runner.cpp"
+    "src/Perf.cpp"
     "src/ScopedGPUMaxClocks.cpp"
 )
 
