@@ -24,6 +24,8 @@ find_package(CLI11 CONFIG REQUIRED)
 find_package(stduuid CONFIG REQUIRED)
 find_package(CUDAToolkit REQUIRED)
 
+
+
 add_executable(
     fabrics-perf
     "src/main.cpp"
@@ -64,8 +66,21 @@ target_include_directories(
     "mxl/lib/src"
 )
 
-target_include_directories(
+if(MXL_FABRICS_OFI)
+  target_compile_definitions(fabrics-perf PRIVATE MXL_FABRICS_OFI=1)
+
+  target_include_directories(
     fabrics-perf
     PRIVATE
     "mxl/lib/fabrics/ofi/src/internal"
-)
+  )
+elseif(MXL_FABRICS_NATIVE)  
+  target_compile_definitions(fabrics-perf PRIVATE MXL_FABRICS_NATIVE=1)
+
+ target_include_directories(
+    fabrics-perf
+    PRIVATE
+    "mxl/lib/fabrics/rdma-core/src/internal"
+  )
+
+endif()

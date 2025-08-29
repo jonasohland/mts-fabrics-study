@@ -280,8 +280,9 @@ namespace riedel::fabricsperf
                 auto extraRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
                 auto [buf, size, loc] = grainRegion(extraRegions, 0);
 
+#ifdef MXL_FABRICS_OFI
                 assert(loc.iface() == FI_HMEM_CUDA);
-
+#endif
                 _extraBuf = reinterpret_cast<void*>(buf);
                 _extraBufSize = size;
             }
@@ -376,6 +377,7 @@ namespace riedel::fabricsperf
                     // done adding target
                     if (status == MXL_STATUS_OK)
                     {
+                        MXL_INFO("signal to peer that we are ready");
                         initiatorReady = true;
                         ctx.signalReady();
                     }
