@@ -9,7 +9,6 @@
 #include "tests/TestTemplateOneWay.hpp"
 #include "tests/TestTemplatePingPong.hpp"
 #include "Executor.hpp"
-#include "Perf.hpp"
 
 namespace fp = riedel::fabricsperf;
 
@@ -33,7 +32,7 @@ int main(int argc, char** argv)
         .targetEndpoint = "127.0.0.1:9992",
         .initiatorEndpoint = "127.0.0.1:9993",
         .output = "output/",
-        .gpu = 0,
+        .gpu = {},
         .domain = "/dev/shm/mxl",
         .flow = "flow.json",
         .iterations = 2000,
@@ -47,7 +46,11 @@ int main(int argc, char** argv)
         config.output,
         "Directory at which the report should be written. Each test case will output a csv file "
         "with the name of the test case. Ex: <output>/MXLFabrics+Host2Host+Verbs+Reflect+Wait.csv");
-    app.add_option("-g, --gpu", config.gpu, "Id of the gpu that should be used");
+    app.add_option("-g, --gpu",
+        config.gpu,
+        "Id's of the gpu that should be used. If only one gpu for a given host is used for the "
+        "testcase, only 1 gpu should be provided. If the testcase involves 2 gpu (intra-node "
+        "inter-device testcase), you must specify 2 gpu id.");
     app.add_option("-r, --run",
         config.run,
         "Name of the test to be run, use the special name 'all' to run all tests. Use 'list' to "
@@ -106,6 +109,7 @@ int main(int argc, char** argv)
         runner.add<fp::MXLSHM<"MXLSHM+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT>>();
         runner.add<fp::NativeCuda<"NativeCuda+Host2Cuda", MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::NativeCuda<"NativeCuda+Cuda2Host", MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::NativeCuda<"NativeCuda+Cuda2Host", MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::OneWayTest>();
         runner.add<fp::PingPongTest>();
         //clang-format on
