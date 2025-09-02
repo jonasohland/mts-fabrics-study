@@ -99,11 +99,6 @@ namespace riedel::fabricsperf
                 {
                     enableCudaPeerAccess(ctx.config().gpu[0], ctx.config().gpu[1]);
                 }
-                else
-                {
-                    throw std::runtime_error(
-                        "Expecting 2 different gpus for device to device transfer");
-                }
 
                 MXL_INFO("running device2device");
                 _src = reinterpret_cast<void*>(cudaGrain[0]);
