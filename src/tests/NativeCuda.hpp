@@ -1,6 +1,13 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <algorithm>
+#include <limits>
+#include <stdexcept>
+#include <vector>
 #include <cuda_runtime.h>
+#include <fmt/format.h>
 #include <mxl/fabrics.h>
 #include "../ScopedGPUMaxClocks.hpp"
 #include "../StaticString.hpp"
@@ -46,10 +53,16 @@ namespace riedel::fabricsperf
 
         void setup(TestContext& ctx) final
         {
-            _cudaRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
-            _hostRegions = ctx.flows().getWriterRegions();
+            std::vector<std::uintptr_t> cudaGrain;
+            for (size_t i = 0; i < ctx.config().gpu.size(); i++)
+            {
+                _cudaRegions.push_back(ctx.flows().getCudaWriterRegions(ctx.config().gpu[i]));
+                auto [cudaGrainPtr, cudaGrainSize, cudaLoc] = grainRegion(_cudaRegions[i], 0);
+                cudaGrain.push_back(cudaGrainPtr);
+                _size = std::min(_size, cudaGrainSize);
+            }
 
-            auto [cudaGrainPtr, cudaGrainSize, cuaLoc] = grainRegion(*_cudaRegions, 0);
+            _hostRegions = ctx.flows().getWriterRegions();
             auto [hostGrainPtr, hostGrainSize, hostLoc] = grainRegion(*_hostRegions, 0);
 
             if (auto status = cudaHostRegister(
@@ -60,13 +73,13 @@ namespace riedel::fabricsperf
                     fmt::format("cudaHostRegister: {}", cudaGetErrorName(status)));
             }
 
-            _size = std::min(cudaGrainSize, hostGrainSize);
+            _size = std::min(_size, hostGrainSize);
 
             if (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA &&
                 TargetLocation == MXL_MEMORY_REGION_TYPE_HOST)
             {
-                MXL_INFO("running host2device");
-                _src = reinterpret_cast<void*>(cudaGrainPtr);
+                MXL_INFO("running device2host");
+                _src = reinterpret_cast<void*>(cudaGrain.front());
                 _dst = reinterpret_cast<void*>(hostGrainPtr);
                 _kind = cudaMemcpyDeviceToHost;
             }
@@ -75,8 +88,27 @@ namespace riedel::fabricsperf
             {
                 MXL_INFO("running host2device");
                 _src = reinterpret_cast<void*>(hostGrainPtr);
-                _dst = reinterpret_cast<void*>(cudaGrainPtr);
+                _dst = reinterpret_cast<void*>(cudaGrain.front());
                 _kind = cudaMemcpyHostToDevice;
+            }
+            else if (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA &&
+                     TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA)
+            {
+                // Use peer API
+                if (ctx.config().gpu.size() == 2 && ctx.config().gpu[0] != ctx.config().gpu[1])
+                {
+                    enableCudaPeerAccess(ctx.config().gpu[0], ctx.config().gpu[1]);
+                }
+                else
+                {
+                    throw std::runtime_error(
+                        "Expecting 2 different gpus for device to device transfer");
+                }
+
+                MXL_INFO("running device2device");
+                _src = reinterpret_cast<void*>(cudaGrain[0]);
+                _dst = reinterpret_cast<void*>(cudaGrain[1]);
+                _kind = cudaMemcpyDeviceToDevice;
             }
             else
             {
@@ -84,14 +116,25 @@ namespace riedel::fabricsperf
             }
         }
 
-        void teardown(TestContext&) final
+        void teardown(TestContext& ctx) final
         {
             MXL_INFO("Teardown");
+
+            if (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA &&
+                TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.config().gpu.size() == 2 &&
+                ctx.config().gpu[0] != ctx.config().gpu[1])
+            {
+                disableCudaPeerAccess(ctx.config().gpu[0], ctx.config().gpu[1]);
+            }
         }
 
         void run(TestContext& ctx) final
         {
-            ScopedGPUMaxClocks clocks{static_cast<int>(ctx.config().gpu)};
+            std::vector<ScopedGPUMaxClocks> clocks;
+            for (auto const& gpuId : ctx.config().gpu)
+            {
+                clocks.emplace_back(ScopedGPUMaxClocks{static_cast<int>(gpuId)});
+            }
 
             auto rate = ctx.flows().createRateTimer();
             auto index = 0;
@@ -138,11 +181,71 @@ namespace riedel::fabricsperf
         void* _src;
         void* _dst;
         cudaMemcpyKind _kind;
-        std::size_t _size;
+        std::size_t _size = std::numeric_limits<size_t>::max();
 
-        std::optional<MXLRegions> _cudaRegions;
+        std::vector<MXLRegions> _cudaRegions;
         std::optional<MXLRegions> _hostRegions;
 
     private:
+        void enableCudaPeerAccess(int gpu1Id, int gpu2Id)
+        {
+            int canAccess = 0;
+            if (auto status = cudaDeviceCanAccessPeer(&canAccess, gpu1Id, gpu2Id);
+                status != cudaSuccess)
+            {
+                throw std::runtime_error(
+                    fmt::format("cudaDeviceCanAccessPeer: {}", cudaGetErrorName(status)));
+            }
+
+            if (!canAccess)
+            {
+                throw std::runtime_error(fmt::format(
+                    "cuda peer api not available between gpu \"{}\" and \"{}\"", gpu1Id, gpu2Id));
+            }
+
+            if (auto status = cudaSetDevice(gpu1Id); status != cudaSuccess)
+            {
+                throw std::runtime_error(
+                    fmt::format("cudaSetDevice: {}", cudaGetErrorName(status)));
+            }
+
+            if (auto status = cudaDeviceEnablePeerAccess(gpu2Id, 0);
+                status != cudaSuccess && status != cudaErrorPeerAccessAlreadyEnabled)
+            {
+                throw std::runtime_error(
+                    fmt::format("cudaDeviceEnablePeerAccess: {}", cudaGetErrorName(status)));
+            }
+
+            if (auto status = cudaSetDevice(gpu2Id); status != cudaSuccess)
+            {
+                throw std::runtime_error(
+                    fmt::format("cudaSetDevice: {}", cudaGetErrorName(status)));
+            }
+            if (auto status = cudaDeviceEnablePeerAccess(gpu1Id, 0);
+                status != cudaSuccess && status != cudaErrorPeerAccessAlreadyEnabled)
+            {
+                throw std::runtime_error(
+                    fmt::format("cudaDeviceEnablePeerAccess: {}", cudaGetErrorName(status)));
+            }
+        }
+
+        void disableCudaPeerAccess(int gpu1Id, int gpu2Id)
+        {
+            if (auto status = cudaSetDevice(gpu1Id); status == cudaSuccess)
+            {
+                if (auto status = cudaDeviceDisablePeerAccess(gpu2Id))
+                {
+                    MXL_ERROR("cudaDeviceDisablePeerAccess: {}", cudaGetErrorName(status));
+                }
+            }
+
+            if (auto status = cudaSetDevice(gpu2Id); status == cudaSuccess)
+            {
+                if (auto status = cudaDeviceDisablePeerAccess(gpu1Id))
+                {
+                    MXL_ERROR("cudaDeviceDisablePeerAccess: {}", cudaGetErrorName(status));
+                }
+            }
+        }
     };
 }
