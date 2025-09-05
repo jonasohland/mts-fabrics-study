@@ -162,6 +162,15 @@ namespace riedel::fabricsperf
                         fmt::format("cudaMemcpy: {}", cudaGetErrorName(status)));
                 }
 
+                if (_kind == cudaMemcpyDeviceToDevice)
+                {
+                    if (auto status = cudaDeviceSynchronize(); status != cudaSuccess)
+                    {
+                        throw std::runtime_error(
+                            fmt::format("cudaDeviceSynchronize: {}", cudaGetErrorName(status)));
+                    }
+                }
+
                 if (i >= 0)
                 {
                     ctx.timerStop(index);
