@@ -4,7 +4,7 @@ script_dir="$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" &>/dev/
 project_dir="$(realpath "${script_dir}/../..")"
 output_root="${project_dir}/output/mts_study"
 
-declare -A reflector_listener=(["libfabric"]="10.26.132.42:9090" ["native"]="10.26.132.42:9091")
+declare -A reflector_listener=(["libfabric"]="10.26.132.43:9090" ["native"]="10.26.132.43:9091")
 runner_initiator_address="10.26.132.23:8001"
 runner_target_address="10.26.132.23:8002"
 gpu_id=0
@@ -13,6 +13,10 @@ nb_iter="200"
 formats=(720 1080 2160)
 libraries=("native" "libfabric")
 
+# function get_args(target, initiator, output_dir, gpu_ids, test_name, connect, flow, nb_iter) {
+#
+# }
+#
 # Device to Device Inter-Host
 function run_d2d_interhost() {
   methods=(Wait Spin)
@@ -36,10 +40,6 @@ function run_d2d_interhost() {
           echo "Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${reflector_listener[$library]}\""
 
           "${project_dir}/build/${library}/fabrics-perf" ${args}
-
-          # "${fabrics_perf}" --run "MXLFabrics+${test}+Verbs+Reflect+${method}" \
-          #   --output "output/h2h-vs-c2c-data/test-${format}" \
-          #   -f "${project_dir}/config/flow-${format}.json" "${@}"
         done
       done
     done
