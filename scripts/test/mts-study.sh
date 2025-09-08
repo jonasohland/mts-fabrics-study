@@ -4,7 +4,7 @@ script_dir="$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" &>/dev/
 project_dir="$(realpath "${script_dir}/../..")"
 output_root="${project_dir}/output/mts_study"
 
-declare -A reflector_listener=(["libfabric"]="10.26.132.43:9090" ["native"]="10.26.132.43:9091")
+declare -A reflector_listener=(["libfabric"]="10.26.132.42:9090" ["native"]="10.26.132.42:9091")
 runner_initiator_address="10.26.132.23:8001"
 runner_target_address="10.26.132.23:8002"
 gpu_id=0
