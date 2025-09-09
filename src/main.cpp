@@ -8,6 +8,7 @@
 #include "tests/NativeCuda.hpp"
 #include "tests/TestTemplateOneWay.hpp"
 #include "tests/TestTemplatePingPong.hpp"
+#include "tests/ucx/UCX.hpp"
 #include "Executor.hpp"
 
 namespace fp = riedel::fabricsperf;
@@ -63,6 +64,8 @@ int main(int argc, char** argv)
     app.add_option("-d, --domain", config.domain, "MXL Domain");
 
     CLI11_PARSE(app, argc, argv);
+
+    MXL_INFO("{}", config.targetEndpoint);
 
     std::signal(SIGINT, signal_handler);
 
