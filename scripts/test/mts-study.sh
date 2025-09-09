@@ -1,10 +1,16 @@
 #! /bin/bash
 
+PURPLE="\033[0;35m"
+CYAN="\033[0;36m"
+NC="\033[0m"
+
 script_dir="$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" &>/dev/null && pwd)"
 project_dir="$(realpath "${script_dir}/../..")"
 output_root="${project_dir}/output/mts_study"
 
-declare -A reflector_listener=(["libfabric"]="10.26.132.43:9090" ["native"]="10.26.132.43:9091")
+declare -A remote_reflector_listener=(["libfabric"]="10.26.132.43:9090" ["native"]="10.26.132.43:9091")
+declare -A local_reflector_listener=(["libfabric"]="127.0.0.1:9090" ["native"]="127.0.0.1:9091")
+
 runner_initiator_address="10.26.132.23:8001"
 runner_target_address="10.26.132.23:8002"
 gpu_id=0
@@ -19,6 +25,8 @@ libraries=("native" "libfabric")
 #
 # Device to Device Inter-Host
 function run_d2d_interhost() {
+  echo -e "${CYAN}Starting Device-to-Device Inter-Host transfers${NC}"
+
   methods=(Wait Spin)
   tests=(Cuda2Cuda)
   for library in "${libraries[@]}"; do
@@ -33,11 +41,11 @@ function run_d2d_interhost() {
           --output ${output_dir} \
           --gpu ${gpu_id} \
           --run ${test_name} \
-          --connect ${reflector_listener[$library]} \
+          --connect ${remote_reflector_listener[$library]} \
           --flow ${format_file} \
           --iterations ${nb_iter}"
 
-          echo "Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${reflector_listener[$library]}\""
+          echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${NC}"
 
           "${project_dir}/build/${library}/fabrics-perf" ${args}
         done
@@ -48,6 +56,8 @@ function run_d2d_interhost() {
 
 # Device to Host 2 Host to Device Inter-Host
 function run_dh2hd_interhost() {
+  echo -e "\033[0;36mStarting Host-to-Device-to-Host-to-Device Inter-Host transfers\033[0m"
+
   methods=(Wait Spin)
   tests=(Cuda2Cuda Cuda2Host2Host2Cuda)
   for library in "${libraries[@]}"; do
@@ -62,11 +72,11 @@ function run_dh2hd_interhost() {
           --output ${output_dir} \
           --gpu ${gpu_id} \
           --run ${test_name} \
-          --connect ${reflector_listener[$library]} \
+          --connect ${remote_reflector_listener[$library]} \
           --flow ${format_file} \
           --iterations ${nb_iter}"
 
-          echo "Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${reflector_listener[$library]}\""
+          echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${NC}"
 
           "${project_dir}/build/${library}/fabrics-perf" ${args}
         done
@@ -76,10 +86,104 @@ function run_dh2hd_interhost() {
 }
 
 # Host to Device Intra-Host
+function run_h2d_intrahost() {
+  echo -e "${CYAN}Starting Host-to-Device Intra-Host transfers${NC}"
+  methods=(Wait Spin)
 
+  for format in "${formats[@]}"; do
+    format_file="${project_dir}/config/flow-${format}.json"
+
+    # libfabric
+    for method in "${methods[@]}"; do
+      test_name="MXLFabrics+Host2Cuda+SHM+OneWay+${method}"
+      output_dir="${output_root}/h2d-intrahost/${format}/libfabric"
+      args="--target ${runner_target_address} \
+        --initiator ${runner_initiator_address} \
+        --output ${output_dir} \
+        --gpu ${gpu_id} \
+        --run ${test_name} \
+        --connect ${local_reflector_listener["libfabric"]} \
+        --flow ${format_file} \
+        --iterations ${nb_iter}"
+
+      echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
+
+      "${project_dir}/build/libfabric/fabrics-perf" ${args}
+    done
+
+    # NativeCuda
+    test_name="NativeCuda+Host2Cuda"
+    output_dir="${output_root}/h2d-intrahost/${format}/native"
+
+    # addresses are dummy, no peer is required
+    args="--target 127.0.0.1:10000 \
+        --initiator 127.0.0.1:10001 \
+        --output ${output_dir} \
+        --gpu ${gpu_id} \
+        --run ${test_name} \
+        --connect 127.0.0.1:8080 \
+        --flow ${format_file} \
+        --iterations ${nb_iter}"
+
+    echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\"${NC}"
+
+    "${project_dir}/build/native/fabrics-perf" ${args}
+  done
+}
 # Device to Host Intra-Host
+function run_d2h_intrahost() {
+  echo -e "\033[0;36mStarting Device-to-Host Intra-Host transfers\033[0m"
+  methods=(Wait Spin)
 
-# Device to Device Intra-Host Inter-GPU
+  for format in "${formats[@]}"; do
+    format_file="${project_dir}/config/flow-${format}.json"
+
+    # libfabric
+    for method in "${methods[@]}"; do
+      test_name="MXLFabrics+Cuda2Host+SHM+OneWay+${method}"
+      output_dir="${output_root}/d2h-intrahost/${format}/libfabric"
+      args="--target ${runner_target_address} \
+        --initiator ${runner_initiator_address} \
+        --output ${output_dir} \
+        --gpu ${gpu_id} \
+        --run ${test_name} \
+        --connect ${local_reflector_listener["libfabric"]} \
+        --flow ${format_file} \
+        --iterations ${nb_iter}"
+
+      echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
+
+      "${project_dir}/build/libfabric/fabrics-perf" ${args}
+    done
+
+    # NativeCuda
+    test_name="NativeCuda+Cuda2Host"
+    output_dir="${output_root}/d2h-intrahost/${format}/native"
+
+    # addresses are dummy, no peer is required
+    args="--target 127.0.0.1:10000 \
+        --initiator 127.0.0.1:10001 \
+        --output ${output_dir} \
+        --gpu ${gpu_id} \
+        --run ${test_name} \
+        --connect 127.0.0.1:8080 \
+        --flow ${format_file} \
+        --iterations ${nb_iter}"
+
+    echo "Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\""
+
+    "${project_dir}/build/native/fabrics-perf" ${args}
+  done
+}
+
+# Device to Device Intra-Host
+# function run_d2d_intrahost() {
+# }
+
+## This where the main thread starts
+trap 'echo "Aborting..."; exit 1' SIGINT
 
 # run_d2d_interhost
-run_dh2hd_interhost
+# run_dh2hd_interhost
+run_h2d_intrahost
+# run_d2h_intrahost

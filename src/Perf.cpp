@@ -1,4 +1,7 @@
 #include "Perf.hpp"
+#include <chrono>
+#include <cstdint>
+#include <string>
 #include <errno.h>
 #include <sched.h>
 #include <string.h>
@@ -6,6 +9,8 @@
 #include <fmt/format.h>
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
+#include <system_error>
 #include "internal/Logging.hpp"
 
 namespace riedel::fabricsperf
@@ -61,7 +66,9 @@ namespace riedel::fabricsperf
     uint64_t PerfRecorder::Event::get() const
     {
         uint64_t out;
+
         if (auto size = ::read(_fd, &out, sizeof(uint64_t)); size != sizeof(uint64_t))
+
         {
             throw std::system_error(errno, std::generic_category(), "read perf event");
         }
@@ -80,6 +87,7 @@ namespace riedel::fabricsperf
 
     void PerfRecorder::start()
     {
+        _startTime = std::chrono::steady_clock::now();
         if (auto status = ::ioctl(_groupFd, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
             status == -1)
         {
@@ -99,6 +107,7 @@ namespace riedel::fabricsperf
         {
             throw std::system_error(errno, std::generic_category(), "disable perf event group");
         }
+        _stopTime = std::chrono::steady_clock::now();
     }
 
     void PerfRecorder::addEvent(std::string name, int type, int config, Filter filter)
@@ -140,6 +149,11 @@ namespace riedel::fabricsperf
         {
             out.emplace_back(event.name(), std::to_string(event.get()));
         }
+
+        out.emplace_back("time_elapsed",
+            std::to_string(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(_stopTime - _startTime)
+                    .count()));
 
         return out;
     }
