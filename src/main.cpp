@@ -8,8 +8,8 @@
 #include "tests/NativeCuda.hpp"
 #include "tests/TestTemplateOneWay.hpp"
 #include "tests/TestTemplatePingPong.hpp"
+#include "tests/ucx/UCX.hpp"
 #include "Executor.hpp"
-#include "Perf.hpp"
 
 namespace fp = riedel::fabricsperf;
 
@@ -61,6 +61,8 @@ int main(int argc, char** argv)
 
     CLI11_PARSE(app, argc, argv);
 
+    MXL_INFO("{}", config.targetEndpoint);
+
     std::signal(SIGINT, signal_handler);
 
     try
@@ -106,6 +108,7 @@ int main(int argc, char** argv)
         runner.add<fp::MXLSHM<"MXLSHM+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT>>();
         runner.add<fp::NativeCuda<"NativeCuda+Host2Cuda", MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::NativeCuda<"NativeCuda+Cuda2Host", MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::UCX>();
         runner.add<fp::OneWayTest>();
         runner.add<fp::PingPongTest>();
         //clang-format on

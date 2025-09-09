@@ -15,6 +15,7 @@ find_package(PkgConfig)
 
 pkg_check_modules(uuid REQUIRED IMPORTED_TARGET uuid)
 pkg_check_modules(csv2 REQUIRED IMPORTED_TARGET csv2)
+pkg_check_modules(ucx REQUIRED IMPORTED_TARGET ucx)
 add_library(unofficial::UUID::uuid ALIAS PkgConfig::uuid)
 
 add_subdirectory(mxl)
@@ -37,6 +38,8 @@ add_executable(
     "src/Runner.cpp"
     "src/Perf.cpp"
     "src/ScopedGPUMaxClocks.cpp"
+    "src/tests/ucx/Context.cpp"
+    "src/tests/ucx/Worker.cpp"
 )
 
 set_target_properties(
@@ -56,6 +59,7 @@ target_link_libraries(
     PkgConfig::csv2
     CUDA::cudart
     CUDA::nvml
+    PkgConfig::ucx
 )
 
 target_include_directories(

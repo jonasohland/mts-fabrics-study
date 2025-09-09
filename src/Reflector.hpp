@@ -18,6 +18,13 @@ namespace riedel::fabricsperf
             std::unordered_map<std::string, std::unique_ptr<TestFactory>> const&);
         ~Reflector() override = default;
 
+        enum class TestState
+        {
+            SETUP,
+            RUN,
+            TEARDOWN
+        };
+
         void run() override;
         void stop() override;
 
@@ -40,6 +47,7 @@ namespace riedel::fabricsperf
         std::condition_variable _c{};
 
         std::unique_ptr<Test> _test{nullptr};
+        TestState _state{TestState::SETUP};
         std::optional<std::string> _localTargetInfo{std::nullopt};
         std::optional<std::string> _remoteTargetInfo{std::nullopt};
         std::optional<std::thread> _testThread{std::nullopt};

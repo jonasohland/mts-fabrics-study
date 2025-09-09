@@ -157,32 +157,20 @@ namespace riedel::fabricsperf
 
         auto testName = testInfo.substr(0, testInfo.find(','));
         auto iterations = std::stoul(testInfo.substr(testInfo.find(',') + 1, testInfo.length()));
-
         MXL_INFO("starting test '{}', expecting {} iterations", testName, iterations);
+
+        reset(iterations);
+
+        if (testInfo != "")
         {
-            std::unique_lock _l{_m};
-
-            reset(iterations);
-
-            if (testInfo != "")
-            {
-                // call test factory for new test
-                test = (*_factories.at(testName))();
-            }
-
-            _c.notify_all();
+            // call test factory for new test
+            test = (*_factories.at(testName))();
         }
 
-        test->setup(*this);
-
-        {
-            std::unique_lock _l{_m};
-
-            _test = std::move(test);
-            _interrupted.store(false, std::memory_order_relaxed);
-            _testThread.emplace([this]() { this->runTest(); });
-            _c.notify_all();
-        }
+        _test = std::move(test);
+        _interrupted.store(false, std::memory_order_relaxed);
+        _testThread.emplace([this]() { this->runTest(); });
+        _c.notify_all();
     }
 
     void Reflector::reset(std::size_t iterations)
@@ -204,8 +192,6 @@ namespace riedel::fabricsperf
         {
             _testThread->join();
             _testThread.reset();
-
-            _test->teardown(*this);
         }
 
         resetTimers(iterations);
@@ -215,11 +201,26 @@ namespace riedel::fabricsperf
     {
         try
         {
+            _test->setup(*this);
+            {
+                std::unique_lock lk{_m};
+                _c.notify_all();
+            }
             _test->run(*this);
+            {
+                std::unique_lock lk{_m};
+                _c.notify_all();
+            }
         }
         catch (std::exception& ex)
         {
             MXL_ERROR("Failed to run reflector implementation for test: {}", ex.what());
         }
+
+        {
+            std::unique_lock lk{_m};
+            _c.notify_all();
+        }
+        _test->teardown(*this);
     }
 }
