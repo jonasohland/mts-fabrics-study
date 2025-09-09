@@ -27,7 +27,7 @@ function run_d2d_interhost() {
         for test in "${tests[@]}"; do
           test_name="MXLFabrics+${test}+Verbs+Reflect+${method}"
           format_file="${project_dir}/config/flow-${format}.json"
-          output_dir="${output_root}/d2d_interhost/${format}/${library}"
+          output_dir="${output_root}/d2d-interhost/${format}/${library}"
           args="--target ${runner_target_address} \
           --initiator ${runner_initiator_address} \
           --output ${output_dir} \
@@ -44,14 +44,42 @@ function run_d2d_interhost() {
       done
     done
   done
-
-  # Device to Host 2 Host to Device Inter-Host
-
-  # Host to Device Intra-Host
-
-  # Device to Host Intra-Host
-
-  # Device to Device Intra-Host Inter-GPU
 }
 
-run_d2d_interhost
+# Device to Host 2 Host to Device Inter-Host
+function run_dh2hd_interhost() {
+  methods=(Wait Spin)
+  tests=(Cuda2Cuda Cuda2Host2Host2Cuda)
+  for library in "${libraries[@]}"; do
+    for method in "${methods[@]}"; do
+      for format in "${formats[@]}"; do
+        for test in "${tests[@]}"; do
+          test_name="MXLFabrics+${test}+Verbs+Reflect+${method}"
+          format_file="${project_dir}/config/flow-${format}.json"
+          output_dir="${output_root}/dh2hd-interhost/${format}/${library}"
+          args="--target ${runner_target_address} \
+          --initiator ${runner_initiator_address} \
+          --output ${output_dir} \
+          --gpu ${gpu_id} \
+          --run ${test_name} \
+          --connect ${reflector_listener[$library]} \
+          --flow ${format_file} \
+          --iterations ${nb_iter}"
+
+          echo "Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${reflector_listener[$library]}\""
+
+          "${project_dir}/build/${library}/fabrics-perf" ${args}
+        done
+      done
+    done
+  done
+}
+
+# Host to Device Intra-Host
+
+# Device to Host Intra-Host
+
+# Device to Device Intra-Host Inter-GPU
+
+# run_d2d_interhost
+run_dh2hd_interhost
