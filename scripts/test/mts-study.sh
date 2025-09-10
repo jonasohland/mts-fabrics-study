@@ -121,7 +121,8 @@ while [[ $# -gt 0 ]]; do
     ;;
   -o | --output)
     output_root="$2"
-    shift 2 
+    shift 2
+    ;;
   -h | --help)
     usage
     exit 0
