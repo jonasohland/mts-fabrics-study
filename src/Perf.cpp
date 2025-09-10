@@ -91,7 +91,7 @@ namespace riedel::fabricsperf
         if (auto status = ::ioctl(_groupFd, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
             status == -1)
         {
-            throw std::system_error(errno, std::generic_category(), "enable perf event group");
+            throw std::system_error(errno, std::generic_category(), "reset perf event group");
         }
         if (auto status = ::ioctl(_groupFd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
             status == -1)
