@@ -1,0 +1,2 @@
+context_switches,cycles_user,cycles_kernel,instructions_user,instructions_kernel,cpu_clock_user,cpu_clock_kernel,task_clock_user,task_clock_kernel,time_elapsed
+200,63851540,2966191,205007336,1645574,59085840,59071043,56911606,56911386,6678308561
