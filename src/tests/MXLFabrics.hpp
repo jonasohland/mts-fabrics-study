@@ -56,8 +56,8 @@ namespace riedel::fabricsperf
         [[nodiscard]]
         bool needsGPU(TestContext const& ctx) const noexcept
         {
-            return (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
-                   (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector());
+            return (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
+                   (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector());
         }
 
         [[nodiscard]]
@@ -210,7 +210,7 @@ namespace riedel::fabricsperf
                 },
                 .provider = Provider,
                 .regions = readerRegions.get(),
-                .deviceSupport=InitiatorLocation != MXL_MEMORY_REGION_TYPE_HOST,
+                .deviceSupport=InitiatorLocation != MXL_MEMORY_REGION_TYPE_HOST || TargetLocation != MXL_MEMORY_REGION_TYPE_HOST,
             };
 
             auto targetConfig = mxlTargetConfig{
@@ -220,7 +220,7 @@ namespace riedel::fabricsperf
                  },
                 .provider = Provider,
                 .regions = writerRegions.get(),
-                .deviceSupport=TargetLocation != MXL_MEMORY_REGION_TYPE_HOST,
+                .deviceSupport=InitiatorLocation != MXL_MEMORY_REGION_TYPE_HOST || TargetLocation != MXL_MEMORY_REGION_TYPE_HOST,
             };
             // clang-format on
 

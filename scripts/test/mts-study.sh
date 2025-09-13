@@ -174,6 +174,7 @@ echo "  Runner initiator address:   $runner_initiator_address"
 display_array gpu_id "GPU IDs"
 echo "  Number of iterations:       $nb_iter"
 display_array formats "Formats"
+echo "  Output Directory:           $output_root"
 echo ""
 
 # Device to Device Inter-Hos
