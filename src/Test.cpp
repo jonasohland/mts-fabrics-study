@@ -1,5 +1,7 @@
 #include "Test.hpp"
 #include <algorithm>
+#include <string>
+#include <unordered_map>
 #include "internal/Logging.hpp"
 
 namespace riedel::fabricsperf
@@ -51,6 +53,11 @@ namespace riedel::fabricsperf
             PERF_TYPE_SOFTWARE,
             PERF_COUNT_SW_TASK_CLOCK,
             PerfRecorder::Filter::Kernel);
+
+        for (auto gpuId : _config.gpu)
+        {
+            _nvmlPcieRecorder.emplace(std::to_string(gpuId), NvmlPcieRecorder(gpuId));
+        }
 
         _perfRecorder.start();
     }
@@ -116,6 +123,22 @@ namespace riedel::fabricsperf
         _perfRecorder.stop();
     }
 
+    void TestContext::startNvmlPcieRecorder()
+    {
+        for (auto& [_, recorder] : _nvmlPcieRecorder)
+        {
+            recorder.start();
+        }
+    }
+
+    void TestContext::stopNvmlPcieRecorder()
+    {
+        for (auto& [_, recorder] : _nvmlPcieRecorder)
+        {
+            recorder.stop();
+        }
+    }
+
     std::vector<std::uint64_t> TestContext::exportTimeRecords() const
     {
         std::vector<std::uint64_t> out(_timeRecords.size());
@@ -159,6 +182,18 @@ namespace riedel::fabricsperf
     std::vector<std::pair<std::string, std::string>> TestContext::exportPerfCounters()
     {
         return _perfRecorder.exportCounters();
+    }
+
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>>
+    TestContext::exportNvmlPcieCounters()
+    {
+        std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> out;
+        for (auto& [gpuId, recorder] : _nvmlPcieRecorder)
+        {
+            out.emplace(gpuId, recorder.exportCounters());
+        }
+
+        return out;
     }
 
     void TestContext::resetTimers(std::size_t iterations) noexcept

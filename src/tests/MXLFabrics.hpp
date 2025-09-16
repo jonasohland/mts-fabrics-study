@@ -435,6 +435,7 @@ namespace riedel::fabricsperf
                 {
                     MXL_INFO("Warmup complete");
                     ctx.startPerfRecorder();
+                    ctx.startNvmlPcieRecorder();
                 }
 
                 if (i >= 0)
@@ -506,6 +507,7 @@ namespace riedel::fabricsperf
             }
 
             ctx.stopPerfRecorder();
+            ctx.stopNvmlPcieRecorder();
         }
 
         void reflector(TestContext& ctx)

@@ -192,6 +192,7 @@ namespace riedel::fabricsperf
                 if (index == 20)
                 {
                     ctx.startPerfRecorder();
+                    ctx.startNvmlPcieRecorder();
                 }
 
                 if (index >= 20)
@@ -223,6 +224,7 @@ namespace riedel::fabricsperf
             }
 
             ctx.stopPerfRecorder();
+            ctx.stopNvmlPcieRecorder();
         }
 
         uint64_t readGrainFromRemote(TestContext& ctx, uint64_t index)
