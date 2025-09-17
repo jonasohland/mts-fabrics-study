@@ -207,7 +207,7 @@ namespace riedel::fabricsperf
         }
 
         uint64_t tindex = index - _timerIndexOffset;
-        if (tindex >= _config.iterations)
+        if (tindex >= _timers.size())
         {
             throw std::runtime_error("timer index out of range");
         }
