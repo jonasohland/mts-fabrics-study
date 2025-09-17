@@ -47,9 +47,9 @@ namespace riedel::fabricsperf
         reinterpret_cast<UCPWorker*>(arg)->handleConnection(conn);
     }
 
-    UCPWorker::UCPWorker(std::string name, bool useFence)
+    UCPWorker::UCPWorker(std::string name, bool useFenceOp)
         : _ctx()
-        , _useFence(useFence)
+        , _useFenceOp(useFenceOp)
         , _name(std::move(name))
     {
         ::ucp_worker_params_t param{};
@@ -85,15 +85,14 @@ namespace riedel::fabricsperf
         ::ucp_mem_map_params_t params;
         ::ucp_mem_h memh;
 
-        params.field_mask = UCP_MEM_MAP_PARAM_FIELD_FLAGS | UCP_MEM_MAP_PARAM_FIELD_ADDRESS |
-                            UCP_MEM_MAP_PARAM_FIELD_LENGTH | UCP_MEM_MAP_PARAM_FIELD_MEMORY_TYPE |
-                            UCP_MEM_MAP_PARAM_FIELD_PROT;
-        params.flags = 0;
+        params.field_mask = UCP_MEM_MAP_PARAM_FIELD_ADDRESS | UCP_MEM_MAP_PARAM_FIELD_LENGTH |
+                            UCP_MEM_MAP_PARAM_FIELD_MEMORY_TYPE | UCP_MEM_MAP_PARAM_FIELD_PROT;
         params.address = addr;
         params.length = size;
         params.memory_type = (regionType == MXL_MEMORY_REGION_TYPE_HOST) ? UCS_MEMORY_TYPE_HOST
                                                                          : UCS_MEMORY_TYPE_CUDA;
-        params.prot = UCP_MEM_MAP_PROT_LOCAL_READ | (write ? UCP_MEM_MAP_PROT_REMOTE_WRITE : 0);
+        params.prot = UCP_MEM_MAP_PROT_LOCAL_WRITE | UCP_MEM_MAP_PROT_REMOTE_WRITE |
+                      UCP_MEM_MAP_PROT_LOCAL_READ | UCP_MEM_MAP_PROT_REMOTE_READ;
 
         MXL_INFO("{}: adding local region 0x{:x} - 0x{:x}, type: {}",
             _name,
@@ -212,18 +211,19 @@ namespace riedel::fabricsperf
         // Post the ucx_put_nbx() operation.
         postPutOp(index);
 
-        // If we can use ::ucp_worker_fence then we do it here, and post the grain index send
-        // right away. Otherwise, it will be posted after the put has completed.
-        if (_useFence)
+        if (_useFenceOp || _putRequest == nullptr)
         {
-            // fence to make sure, the write completes before the send
-            ucx(::ucp_worker_fence, "ucp_worker_fence", _raw);
+            if (_useFenceOp)
+            {
+                ucx(::ucp_worker_fence, "ucp_worker_fence", _raw);
+            }
 
             postGrainIndexSend();
         }
     }
 
-    std::optional<uint64_t> UCPWorker::receiveGrainBlocking(std::chrono::milliseconds timeout)
+    std::pair<std::optional<uint64_t>, ::ucs_status_t> UCPWorker::receiveGrainBlocking(
+        std::chrono::milliseconds timeout)
     {
         if (!_endpoint)
         {
@@ -238,7 +238,8 @@ namespace riedel::fabricsperf
             // If there is no request, it has completed right away
             if (!_recvRequest)
             {
-                return _inFlightGrainIndex;
+                MXL_DEBUG("recv ok immediate: {}", _inFlightGrainIndex);
+                return {_inFlightGrainIndex, UCS_OK};
             }
         }
 
@@ -246,39 +247,62 @@ namespace riedel::fabricsperf
         makeProgressBlocking(timeout);
 
         // If the request still exists, return nullopt
-        if (_recvRequest)
+        if (!_recvRequest)
         {
-            return std::nullopt;
+            if (_recvRequestStatus != UCS_OK)
+            {
+                return {std::nullopt, _recvRequestStatus};
+            }
+
+            return {_inFlightGrainIndex, UCS_OK};
         }
 
-        return _inFlightGrainIndex;
+        return {std::nullopt, UCS_OK};
     }
 
-    std::optional<uint64_t> UCPWorker::receiveGrainNonBlocking()
+    std::pair<std::optional<uint64_t>, ::ucs_status_t> UCPWorker::receiveGrainNonBlocking()
     {
         if (!_endpoint)
         {
             throw std::runtime_error("not connected");
         }
 
-        postGrainIndexRecv();
-        makeProgress();
-
-        if (_recvRequest)
+        if (!_recvRequest)
         {
-            return std::nullopt;
+            postGrainIndexRecv();
         }
 
-        return _inFlightGrainIndex;
+        if (!_recvRequest)
+        {
+            MXL_DEBUG("recv ok");
+
+            return {_inFlightGrainIndex, UCS_OK};
+        }
+
+        makeProgress();
+
+        if (!_recvRequest)
+        {
+            return {_inFlightGrainIndex, _recvRequestStatus};
+        }
+
+        return {std::nullopt, UCS_OK};
     }
 
     bool UCPWorker::makeProgress()
     {
-        if (::ucp_worker_progress(_raw) > 0)
+        std::size_t nprogress = 0;
+        while (::ucp_worker_progress(_raw) > 0)
         {
-            afterProgress();
+            ++nprogress;
         }
 
+        if (nprogress)
+        {
+            MXL_DEBUG("made {} progresses", nprogress);
+        }
+
+        afterProgress();
         return hasWork();
     }
 
@@ -289,19 +313,12 @@ namespace riedel::fabricsperf
             return false;
         }
 
-        bool someProgress = false;
         while (::ucp_worker_arm(_raw) == UCS_ERR_BUSY)
         {
-            while (::ucp_worker_progress(_raw))
+            if (!makeProgress())
             {
-                someProgress = true;
+                return false;
             }
-        }
-
-        if (someProgress)
-        {
-            afterProgress();
-            return hasWork();
         }
 
         ::pollfd pfd = {
@@ -324,11 +341,7 @@ namespace riedel::fabricsperf
 
         if (npoll > 0)
         {
-            while (::ucp_worker_progress(_raw) > 0)
-            {
-            }
-
-            afterProgress();
+            return makeProgress();
         }
 
         return hasWork();
@@ -351,6 +364,7 @@ namespace riedel::fabricsperf
             obj.emplace("address", static_cast<double>(reinterpret_cast<std::uintptr_t>(reg.addr)));
             obj.emplace("size", static_cast<double>(reg.size));
             obj.emplace("rkey", reg.rkey);
+            obj.emplace("type", static_cast<double>(static_cast<int>(reg.memoryType)));
 
             regions->second.get<picojson::array>().emplace_back(std::move(obj));
         }
@@ -382,16 +396,20 @@ namespace riedel::fabricsperf
             auto const& address = region.at("address").get<double>();
             auto const& size = region.at("size").get<double>();
             auto const& rkey = region.at("rkey").get<std::string>();
+            auto const& memoryType = region.at("type").get<double>();
 
-            MXL_INFO("{}: adding remote region 0x{:x} - 0x{:x}",
-                _name,
+            auto const& addedRegion = _remoteRegions.emplace_back(
                 static_cast<std::uintptr_t>(address),
-                static_cast<std::uintptr_t>(address) + static_cast<std::uintptr_t>(size));
-
-            _remoteRegions.emplace_back(static_cast<std::uintptr_t>(address),
                 static_cast<std::size_t>(size),
                 rkey,
-                nullptr);
+                nullptr,
+                static_cast<::ucs_memory_type_t>(static_cast<int>(memoryType)));
+
+            MXL_INFO("{}: adding remote region 0x{:x} - 0x{:x}, type: {}",
+                _name,
+                addedRegion.addr,
+                addedRegion.addr + addedRegion.size,
+                addedRegion.memoryType == UCS_MEMORY_TYPE_CUDA ? "cuda" : "host");
         }
     }
 
@@ -402,7 +420,7 @@ namespace riedel::fabricsperf
             return;
         }
 
-        MXL_INFO("unpacking rkeys");
+        MXL_INFO("{}: unpacking rkeys", _name);
 
         for (auto& region : _remoteRegions)
         {
@@ -439,55 +457,64 @@ namespace riedel::fabricsperf
         {
             ::ucp_request_free(_disconnectReq);
 
-            MXL_INFO("endpoint disconnected");
+            MXL_INFO("{}: endpoint disconnected", _name);
             _disconnectReq = nullptr;
             destroyEndpoint();
         }
 
-        if (_sendRequest && ::ucp_request_check_status(_sendRequest) != UCS_INPROGRESS)
+        if (_sendRequest)
         {
-            ::ucp_request_free(_sendRequest);
-            _sendRequest = nullptr;
-
-            if (_connectionWaitFlags & ConnectionFlags::WAIT_CONNECTED_SEND)
+            _sendRequestStatus = ::ucp_request_check_status(_sendRequest);
+            if (_sendRequestStatus != UCS_INPROGRESS)
             {
-                _connectionWaitFlags &= ~(ConnectionFlags::WAIT_CONNECTED_SEND);
+                ::ucp_request_free(_sendRequest);
+                _sendRequest = nullptr;
+
+                if (_connectionWaitFlags & ConnectionFlags::WAIT_CONNECTED_SEND)
+                {
+                    _connectionWaitFlags &= ~(ConnectionFlags::WAIT_CONNECTED_SEND);
+                }
+                else
+                {
+                    MXL_DEBUG("send ok: {}", _inFlightGrainIndex);
+                }
             }
         }
 
-        if (_putRequest && ::ucp_request_check_status(_putRequest) != UCS_INPROGRESS)
+        if (_putRequest)
         {
-            ::ucp_request_free(_putRequest);
-            _putRequest = nullptr;
-
-            if (!_useFence)
+            _putRequestStatus = ::ucp_request_check_status(_putRequest);
+            if (_putRequestStatus != UCS_INPROGRESS)
             {
-                postGrainIndexSend();
+                ::ucp_request_free(_putRequest);
+                _putRequest = nullptr;
+
+                if (_putRequestStatus == UCS_OK)
+                {
+                    MXL_DEBUG("put ok");
+                    if (!_useFenceOp)
+                    {
+                        postGrainIndexSend();
+                    }
+                }
             }
         }
 
-        if (_recvRequest &&
-            ::ucp_stream_recv_request_test(_recvRequest, &_recvLen) != UCS_INPROGRESS)
+        if (_recvRequest)
         {
-            ::ucp_request_free(_recvRequest);
-            _recvRequest = nullptr;
+            _recvRequestStatus = ::ucp_stream_recv_request_test(_recvRequest, &_recvLen);
 
-            if (_connectionWaitFlags & ConnectionFlags::WAIT_CONNECTED_RECV)
+            if (_recvRequestStatus != UCS_INPROGRESS)
             {
-                _connectionWaitFlags &= ~(ConnectionFlags::WAIT_CONNECTED_RECV);
-                _remoteNameBuffer.resize(_recvLen);
-                MXL_INFO("{}: connection established to {}", _name, _remoteNameBuffer);
-            }
-            else
-            {
-                auto& region = _localRegions[_inFlightGrainIndex % _localRegions.size()];
+                ::ucp_request_free(_recvRequest);
+                _recvRequest = nullptr;
 
-                // place the index at the end of the buffer
-                auto indexInBuffer = *reinterpret_cast<uint64_t*>(
-                    reinterpret_cast<std::uintptr_t>(region.addr) +
-                    (region.size - sizeof(_inFlightGrainIndex)));
-
-                assert(indexInBuffer == _inFlightGrainIndex);
+                if (_connectionWaitFlags & ConnectionFlags::WAIT_CONNECTED_RECV)
+                {
+                    _connectionWaitFlags &= ~(ConnectionFlags::WAIT_CONNECTED_RECV);
+                    _remoteNameBuffer.resize(_recvLen);
+                    MXL_INFO("{}: connection established to {}", _name, _remoteNameBuffer);
+                }
             }
         }
     }
@@ -500,22 +527,21 @@ namespace riedel::fabricsperf
 
     void UCPWorker::postPutOp(uint64_t index)
     {
+        MXL_DEBUG("post put: {}", index);
         _inFlightGrainIndex = index;
 
         auto const& localRegion = _localRegions[index % _localRegions.size()];
         auto const& remoteRegion = _remoteRegions[index % _remoteRegions.size()];
 
-        // place the index at the end of the buffer
-        *reinterpret_cast<uint64_t*>(reinterpret_cast<std::uintptr_t>(localRegion.addr) +
-                                     (localRegion.size - sizeof(index))) = index;
-
         ::ucp_request_param_t putParams;
-        putParams.op_attr_mask = 0;
+        putParams.op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FIELD_MEMORY_TYPE;
+        putParams.memh = localRegion.handle;
+        putParams.memory_type = localRegion.memoryType;
         _putRequest = ucxReq(::ucp_put_nbx,
             "submit grain write op",
             *_endpoint,
             localRegion.addr,
-            std::max(localRegion.size, remoteRegion.size),
+            std::min(localRegion.size, remoteRegion.size),
             remoteRegion.addr,
             remoteRegion.rkey,
             &putParams);
@@ -523,6 +549,7 @@ namespace riedel::fabricsperf
 
     void UCPWorker::postGrainIndexSend()
     {
+        MXL_DEBUG("post send: {}", _inFlightGrainIndex);
         ::ucp_request_param_t streamSendParams;
         streamSendParams.op_attr_mask = 0;
         _sendRequest = ucxReq(::ucp_stream_send_nbx,
@@ -535,6 +562,8 @@ namespace riedel::fabricsperf
 
     void UCPWorker::postGrainIndexRecv()
     {
+        MXL_DEBUG("post recv");
+
         ::ucp_request_param_t params;
         params.op_attr_mask = UCP_OP_ATTR_FIELD_FLAGS;
         params.flags = UCP_STREAM_RECV_FLAG_WAITALL;
@@ -605,7 +634,7 @@ namespace riedel::fabricsperf
     {
         if (err == UCS_ERR_CONNECTION_RESET)
         {
-            MXL_INFO("remote endpoint disconnected");
+            MXL_INFO("{}: remote endpoint disconnected", _name);
         }
 
         destroyEndpoint();

@@ -26,10 +26,11 @@ namespace riedel::fabricsperf
             std::size_t size;
             std::string rkeyp;
             ::ucp_rkey_h rkey;
+            ::ucs_memory_type_t memoryType;
         };
 
     public:
-        UCPWorker(std::string name, bool useFence);
+        UCPWorker(std::string name, bool useFenceOp);
         ~UCPWorker();
 
         enum ConnectionFlags
@@ -44,8 +45,9 @@ namespace riedel::fabricsperf
         void disconnect();
 
         void transferGrain(uint64_t index);
-        std::optional<uint64_t> receiveGrainNonBlocking();
-        std::optional<uint64_t> receiveGrainBlocking(std::chrono::milliseconds);
+        std::pair<std::optional<uint64_t>, ::ucs_status_t> receiveGrainNonBlocking();
+        std::pair<std::optional<uint64_t>, ::ucs_status_t> receiveGrainBlocking(
+            std::chrono::milliseconds);
 
         bool makeProgress();
         bool makeProgressBlocking(std::chrono::milliseconds duration);
@@ -85,12 +87,15 @@ namespace riedel::fabricsperf
         std::string _remoteNameBuffer;
         int _connectionWaitFlags{};
 
-        bool _useFence = false;
+        bool _useFenceOp{false};
         uint64_t _inFlightGrainIndex{0};
         std::size_t _recvLen;
         void* _recvRequest{nullptr};
+        ucs_status_t _recvRequestStatus{};
         void* _sendRequest{nullptr};
+        ucs_status_t _sendRequestStatus{};
         void* _putRequest{nullptr};
+        ucs_status_t _putRequestStatus{};
         void* _disconnectReq{nullptr};
 
         bool _rkeysReady{false};
