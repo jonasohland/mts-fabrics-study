@@ -34,7 +34,7 @@ namespace riedel::fabricsperf
         std::vector<std::pair<std::string, std::string>> exportCounters() const noexcept;
 
     private:
-        void run();
+        void record();
 
     private:
         Nvml _nvml;

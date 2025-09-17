@@ -157,7 +157,7 @@ namespace riedel::fabricsperf
                     ctx.timerStart(index);
                 }
 
-                if (auto status = cudaMemcpy(_src, _dst, _size, _kind); status != cudaSuccess)
+                if (auto status = cudaMemcpy(_dst, _src, _size, _kind); status != cudaSuccess)
                 {
                     throw std::runtime_error(
                         fmt::format("cudaMemcpy: {}", cudaGetErrorName(status)));

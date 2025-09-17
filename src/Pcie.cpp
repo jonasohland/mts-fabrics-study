@@ -57,7 +57,7 @@ namespace riedel::fabricsperf
         if (!_handle)
         {
             _throughputs.clear();
-            _handle = std::thread([&]() { this->run(); });
+            _handle = std::thread([&]() { this->record(); });
         }
         else
         {
@@ -90,7 +90,7 @@ namespace riedel::fabricsperf
         return out;
     }
 
-    void NvmlPcieRecorder::run()
+    void NvmlPcieRecorder::record()
     {
         auto nextSampleTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(20);
 
