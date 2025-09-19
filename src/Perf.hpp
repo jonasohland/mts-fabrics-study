@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <list>
 #include <string>
@@ -49,6 +50,8 @@ namespace riedel::fabricsperf
 
     private:
         std::list<Event> _events;
+        std::chrono::steady_clock::time_point _startTime;
+        std::chrono::steady_clock::time_point _stopTime;
         int _groupFd;
     };
 }

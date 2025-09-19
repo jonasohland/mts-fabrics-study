@@ -1,8 +1,12 @@
 #include "Output.hpp"
 #include <array>
 #include <filesystem>
+#include <fstream>
 #include <stdexcept>
+#include <fmt/format.h>
+#include <unordered_map>
 #include "CSV.hpp"
+#include "Pcm.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -76,4 +80,47 @@ namespace riedel::fabricsperf
         }
     }
 
+    void writeNvmlPcieCounterTest(std::string const& directory, std::string const& testName,
+        std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> const&
+            devices)
+    {
+        std::vector<std::string> titles = {"tx_throughput", "rx_throughput"};
+        for (auto const& [deviceId, samples] : devices)
+        {
+            std::ofstream ofs{directory + "/" + testName + "_" + deviceId + ".pcie.csv"};
+            csv::Writer csvw{ofs};
+
+            csvw.write_row(titles);
+            for (auto const& sample : samples)
+            {
+                csvw.write_row(std::vector{sample.first, sample.second});
+            }
+        }
+    }
+
+    void writeNvmlPcieCounters(std::string const& directory, PcieCounters const& counters)
+    {
+        std::filesystem::create_directories(directory);
+
+        for (auto const& [testName, devices] : counters)
+        {
+            writeNvmlPcieCounterTest(directory, testName, devices);
+        }
+    }
+
+    void writePcmData(std::string const& directory, PcmData const& counters)
+    {
+        std::filesystem::create_directories(directory);
+
+        for (auto const& [testName, test] : counters)
+        {
+            for (auto const& [pcm, data] : test)
+            {
+                auto fileName = fmt::format("{}/{}.pcm.{}.csv", directory, testName, toString(pcm));
+                std::ofstream ofs{fileName};
+
+                ofs << data;
+            }
+        }
+    }
 }

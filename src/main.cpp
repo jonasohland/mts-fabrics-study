@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <optional>
 #include <CLI/CLI.hpp>
 #include <linux/perf_event.h>
 #include <mxl/mxl.h>
@@ -36,10 +37,11 @@ int main(int argc, char** argv)
         .targetEndpoint = "127.0.0.1:9992",
         .initiatorEndpoint = "127.0.0.1:9993",
         .output = "output/",
-        .gpu = 0,
+        .gpu = {},
         .domain = "/dev/shm/mxl",
         .flow = "flow.json",
         .iterations = 2000,
+        .pcmAddr = std::nullopt,
     };
 
     app.add_flag("--runner", config.runner, "Run as the test runner");
@@ -50,7 +52,11 @@ int main(int argc, char** argv)
         config.output,
         "Directory at which the report should be written. Each test case will output a csv file "
         "with the name of the test case. Ex: <output>/MXLFabrics+Host2Host+Verbs+Reflect+Wait.csv");
-    app.add_option("-g, --gpu", config.gpu, "Id of the gpu that should be used");
+    app.add_option("-g, --gpu",
+        config.gpu,
+        "Id's of the gpu that should be used. If only one gpu for a given host is used for the "
+        "testcase, only 1 gpu should be provided. If the testcase involves 2 gpu (intra-node "
+        "inter-device testcase), you must specify 2 gpu id.");
     app.add_option("-r, --run",
         config.run,
         "Name of the test to be run, use the special name 'all' to run all tests. Use 'list' to "
@@ -61,6 +67,8 @@ int main(int argc, char** argv)
     app.add_option("-n, --iterations", config.iterations, "Number of test iterations");
     app.add_option("-l, --listen", config.listen, "Address to bind to (implies reflector)");
     app.add_option("-d, --domain", config.domain, "MXL Domain");
+    app.add_option(
+        "-p, --pcm", config.pcmAddr, "Http server address for PCM (Performance Counter Monitor).");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -111,6 +119,7 @@ int main(int argc, char** argv)
         runner.add<fp::MXLSHM<"MXLSHM+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT>>();
         runner.add<fp::NativeCuda<"NativeCuda+Host2Cuda", MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::NativeCuda<"NativeCuda+Cuda2Host", MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::NativeCuda<"NativeCuda+Cuda2Cuda", MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::UCX<"UCX+Host2Host+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
         runner.add<fp::UCX<"UCX+Host2Host+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
         runner.add<fp::UCX<"UCX+Host2Host+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();

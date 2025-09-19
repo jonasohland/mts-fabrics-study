@@ -56,8 +56,8 @@ namespace riedel::fabricsperf
         [[nodiscard]]
         bool needsGPU(TestContext const& ctx) const noexcept
         {
-            return (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
-                   (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector());
+            return (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
+                   (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector());
         }
 
         [[nodiscard]]
@@ -210,7 +210,7 @@ namespace riedel::fabricsperf
                 },
                 .provider = Provider,
                 .regions = readerRegions.get(),
-                .deviceSupport=InitiatorLocation != MXL_MEMORY_REGION_TYPE_HOST,
+                .deviceSupport=InitiatorLocation != MXL_MEMORY_REGION_TYPE_HOST || TargetLocation != MXL_MEMORY_REGION_TYPE_HOST,
             };
 
             auto targetConfig = mxlTargetConfig{
@@ -220,7 +220,7 @@ namespace riedel::fabricsperf
                  },
                 .provider = Provider,
                 .regions = writerRegions.get(),
-                .deviceSupport=TargetLocation != MXL_MEMORY_REGION_TYPE_HOST,
+                .deviceSupport=InitiatorLocation != MXL_MEMORY_REGION_TYPE_HOST || TargetLocation != MXL_MEMORY_REGION_TYPE_HOST,
             };
             // clang-format on
 
@@ -277,11 +277,12 @@ namespace riedel::fabricsperf
 
             if constexpr (ExtraCopy == ExtraCopyMode::ExtraCopy)
             {
-                auto extraRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
+                auto extraRegions = ctx.flows().getCudaWriterRegions(ctx.config().gpu.at(0));
                 auto [buf, size, loc] = grainRegion(extraRegions, 0);
 
+#ifdef MXL_FABRICS_OFI
                 assert(loc.iface() == FI_HMEM_CUDA);
-
+#endif
                 _extraBuf = reinterpret_cast<void*>(buf);
                 _extraBufSize = size;
             }
@@ -333,7 +334,7 @@ namespace riedel::fabricsperf
             std::optional<ScopedGPUMaxClocks> gpuClocksLock;
             if (needsGPU(ctx))
             {
-                gpuClocksLock.emplace(static_cast<int>(ctx.config().gpu));
+                gpuClocksLock.emplace(static_cast<int>(ctx.config().gpu.at(0)));
             }
 
             while (!_remoteEndpointInfo)
@@ -376,6 +377,7 @@ namespace riedel::fabricsperf
                     // done adding target
                     if (status == MXL_STATUS_OK)
                     {
+                        MXL_INFO("signal to peer that we are ready");
                         initiatorReady = true;
                         ctx.signalReady();
                     }
@@ -433,6 +435,9 @@ namespace riedel::fabricsperf
                 {
                     MXL_INFO("Warmup complete");
                     ctx.startPerfRecorder();
+                    ctx.startNvmlPcieRecorder();
+                    // ctx.launchPcmMemoryRecorder();
+                    ctx.launchPcmPcieRecorder();
                 }
 
                 if (i >= 0)
@@ -504,6 +509,7 @@ namespace riedel::fabricsperf
             }
 
             ctx.stopPerfRecorder();
+            ctx.stopNvmlPcieRecorder();
         }
 
         void reflector(TestContext& ctx)
@@ -583,7 +589,7 @@ namespace riedel::fabricsperf
             }
             else if constexpr (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA)
             {
-                regions = ctx.flows().getCudaReaderRegions(ctx.config().gpu);
+                regions = ctx.flows().getCudaReaderRegions(ctx.config().gpu.at(0));
             }
             else
             {
@@ -602,7 +608,7 @@ namespace riedel::fabricsperf
             }
             else if constexpr (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA)
             {
-                regions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
+                regions = ctx.flows().getCudaWriterRegions(ctx.config().gpu.at(0));
             }
             else
             {

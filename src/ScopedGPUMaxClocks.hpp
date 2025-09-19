@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ScopedGPUMaxClocks.hpp"
+#include <optional>
 
 namespace riedel::fabricsperf
 {
@@ -8,20 +8,24 @@ namespace riedel::fabricsperf
     class ScopedGPUMaxClocks
     {
     public:
+        ScopedGPUMaxClocks() = default;
+
         ScopedGPUMaxClocks(int gpuId);
         ~ScopedGPUMaxClocks();
 
         // no move, no copy
         ScopedGPUMaxClocks(ScopedGPUMaxClocks const&) = delete;
         ScopedGPUMaxClocks& operator=(ScopedGPUMaxClocks const&) = delete;
-        ScopedGPUMaxClocks(ScopedGPUMaxClocks&& other) = delete;
-        ScopedGPUMaxClocks& operator=(ScopedGPUMaxClocks&& other) = delete;
+        ScopedGPUMaxClocks(ScopedGPUMaxClocks&& other);
+        ScopedGPUMaxClocks& operator=(ScopedGPUMaxClocks&& other);
+
+        void setId(int gpuId);
 
     private:
         void set();
         void unset();
 
-        int _gpuId;
+        std::optional<int> _gpuId = std::nullopt;
     };
 
 }

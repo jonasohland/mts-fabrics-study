@@ -12,7 +12,11 @@
 
 namespace riedel::fabricsperf
 {
-    namespace ofi = mxl::lib::fabrics::ofi;
+#ifdef MXL_FABRICS_NATIVE
+    namespace fabrics = mxl::lib::fabrics::rdma_core;
+#elif MXL_FABRICS_OFI
+    namespace fabrics = mxl::lib::fabrics::ofi;
+#endif
 
     struct RegionsDeleter
     {
@@ -21,7 +25,7 @@ namespace riedel::fabricsperf
 
     using MXLRegions = std::unique_ptr<mxlRegions_t, RegionsDeleter>;
 
-    using MXLGrainRegion = std::tuple<std::uintptr_t, std::size_t, ofi::Region::Location>;
+    using MXLGrainRegion = std::tuple<std::uintptr_t, std::size_t, fabrics::Region::Location>;
 
     MXLGrainRegion grainRegion(MXLRegions& regions, uint64_t index);
     std::vector<MXLGrainRegion> grainRegions(MXLRegions& regions);
