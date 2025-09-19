@@ -50,7 +50,7 @@ namespace riedel::fabricsperf
             }
             else if constexpr (DestRegion == MXL_MEMORY_REGION_TYPE_CUDA)
             {
-                regions = ctx.flows().getCudaWriterRegions(ctx.config().gpu);
+                regions = ctx.flows().getCudaWriterRegions(ctx.config().gpu.front());
             }
             else
             {
@@ -69,7 +69,7 @@ namespace riedel::fabricsperf
             }
             else if constexpr (SrcRegion == MXL_MEMORY_REGION_TYPE_CUDA)
             {
-                regions = ctx.flows().getCudaReaderRegions(ctx.config().gpu);
+                regions = ctx.flows().getCudaReaderRegions(ctx.config().gpu.front());
             }
             else
             {
@@ -275,6 +275,8 @@ namespace riedel::fabricsperf
                 if (i == 0)
                 {
                     ctx.startPerfRecorder();
+                    ctx.startNvmlPcieRecorder();
+                    ctx.launchPcmPcieRecorder();
                     MXL_INFO("warmup complete");
                 }
 
@@ -318,6 +320,7 @@ namespace riedel::fabricsperf
             }
 
             ctx.stopPerfRecorder();
+            ctx.stopNvmlPcieRecorder();
         }
 
         void testReflector(TestContext& ctx)

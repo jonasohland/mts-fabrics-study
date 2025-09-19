@@ -124,14 +124,19 @@ int main(int argc, char** argv)
         runner.add<fp::UCX<"UCX+Host2Host+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
         runner.add<fp::UCX<"UCX+Host2Host+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
         runner.add<fp::UCX<"UCX+Host2Host+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::UCX<"UCX+Device2Host+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::UCX<"UCX+Device2Host+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::UCX<"UCX+Device2Host+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::UCX<"UCX+Device2Host+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
-        runner.add<fp::UCX<"UCX+Host2Device+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::UCX<"UCX+Host2Device+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::UCX<"UCX+Host2Device+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
-        runner.add<fp::UCX<"UCX+Host2Device+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Host+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::UCX<"UCX+Cuda2Host+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::UCX<"UCX+Cuda2Host+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::UCX<"UCX+Cuda2Host+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_HOST>>();
+        runner.add<fp::UCX<"UCX+Host2Cuda+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Host2Cuda+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Host2Cuda+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Host2Cuda+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+
         runner.add<fp::OneWayTest>();
         runner.add<fp::PingPongTest>();
         //clang-format on

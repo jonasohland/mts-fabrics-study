@@ -196,10 +196,10 @@ function run_d2d_interhost() {
   tests=(Cuda2Cuda)
   libraries=("native" "libfabric")
 
-  for library in "${libraries[@]}"; do
-    for method in "${methods[@]}"; do
-      for format in "${formats[@]}"; do
-        for test in "${tests[@]}"; do
+  for method in "${methods[@]}"; do
+    for format in "${formats[@]}"; do
+      for test in "${tests[@]}"; do
+        for library in "${libraries[@]}"; do
           test_name="MXLFabrics+${test}+Verbs+Reflect+${method}"
           format_file="${project_dir}/config/flow-${format}.json"
           output_dir="${output_root}/d2d-interhost/${format}/${library}"
@@ -217,6 +217,25 @@ function run_d2d_interhost() {
 
           "${project_dir}/build/${library}/fabrics-perf" ${args}
         done
+
+        # ucx
+        test_name="UCX+${test}+${method}"
+        format_file="${project_dir}/config/flow-${format}.json"
+        output_dir="${output_root}/d2d-interhost/${format}/ucx"
+        args="--target ${runner_target_address} \
+          --initiator ${runner_initiator_address} \
+          --output ${output_dir} \
+          --gpu ${gpu_id[0]} \
+          --run ${test_name} \
+          --connect ${remote_reflector_listener["libfabric"]} \
+          --flow ${format_file} \
+          ${pcm_arg} \
+          --iterations ${nb_iter}"
+
+        echo -e "${PURPLE}Running test UCX \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener["libfabric"]}\"${NC}"
+
+        "${project_dir}/build/libfabric/fabrics-perf" ${args}
+
       done
     done
   done
