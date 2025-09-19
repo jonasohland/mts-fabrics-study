@@ -1,8 +1,10 @@
 #include "Test.hpp"
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include "internal/Logging.hpp"
+#include "Pcm.hpp"
 
 namespace riedel::fabricsperf
 {
@@ -13,6 +15,11 @@ namespace riedel::fabricsperf
         , _isRunner(config.mode() == Mode::RUNNER)
         , _config(config)
     {
+        if (_config.pcmAddr)
+        {
+            _pcm = Pcm(*config.pcmAddr);
+        }
+
         _perfRecorder.addEvent("context_switches",
             PERF_TYPE_SOFTWARE,
             PERF_COUNT_SW_CONTEXT_SWITCHES,
@@ -123,6 +130,22 @@ namespace riedel::fabricsperf
         _perfRecorder.stop();
     }
 
+    void TestContext::launchPcmPcieRecorder()
+    {
+        if (_pcm)
+        {
+            _pcm->run(PcmMetric::Pcie, _config.iterations);
+        }
+    }
+
+    void TestContext::launchPcmMemoryRecorder()
+    {
+        if (_pcm)
+        {
+            _pcm->run(PcmMetric::Memory, _config.iterations); // TODO: add fps
+        }
+    }
+
     void TestContext::startNvmlPcieRecorder()
     {
         for (auto& [_, recorder] : _nvmlPcieRecorder)
@@ -194,6 +217,16 @@ namespace riedel::fabricsperf
         }
 
         return out;
+    }
+
+    std::unordered_map<PcmMetric, std::string> TestContext::exportPcmData()
+    {
+        if (_pcm)
+        {
+            return _pcm->exportData();
+        }
+
+        return {};
     }
 
     void TestContext::resetTimers(std::size_t iterations) noexcept

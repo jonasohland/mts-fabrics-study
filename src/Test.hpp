@@ -9,6 +9,7 @@
 #include "Config.hpp"
 #include "FlowSetup.hpp"
 #include "Pcie.hpp"
+#include "Pcm.hpp"
 #include "Perf.hpp"
 
 namespace riedel::fabricsperf
@@ -34,6 +35,8 @@ namespace riedel::fabricsperf
         void recordCurrentTime(uint64_t index);
         void startPerfRecorder();
         void stopPerfRecorder();
+        void launchPcmPcieRecorder();
+        void launchPcmMemoryRecorder();
         void startNvmlPcieRecorder();
         void stopNvmlPcieRecorder();
 
@@ -50,6 +53,7 @@ namespace riedel::fabricsperf
         std::vector<std::pair<std::string, std::string>> exportPerfCounters();
         std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>>
         exportNvmlPcieCounters();
+        std::unordered_map<PcmMetric, std::string> exportPcmData();
 
     protected:
         void resetFlows(std::string const& flowDef);
@@ -70,6 +74,7 @@ namespace riedel::fabricsperf
 
         PerfRecorder _perfRecorder{};
         std::unordered_map<std::string, NvmlPcieRecorder> _nvmlPcieRecorder{};
+        std::optional<Pcm> _pcm;
         std::optional<FlowSetup> _flows{};
         bool _isRunner;
         Config const& _config;

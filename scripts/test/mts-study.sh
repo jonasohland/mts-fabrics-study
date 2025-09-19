@@ -21,6 +21,7 @@ nb_iter="200"
 formats=(720 1080 2160)
 functions_to_run=("d2d-interhost" "dh2hd-interhost" "h2d-intrahost" "d2h-intrahost" "d2d-intrahost")
 output_root="${project_dir}/output"
+pcm_address=""
 
 # Function to display usage
 usage() {
@@ -52,7 +53,8 @@ OPTIONS:
     IFS=,
     echo "${formats[*]}"
   ))
-    -o --output                                     Output directory (default: $output_root)
+    -p, --pcm                                       PCM Server address
+    -o, --output                                    Output directory (default: $output_root)
     -h, --help                                      Show this help message
 EOF
 }
@@ -119,6 +121,10 @@ while [[ $# -gt 0 ]]; do
     parse_list "$2" formats
     shift 2
     ;;
+  -p | --pcm)
+    pcm_address="$2"
+    shift 2
+    ;;
   -o | --output)
     output_root="$2"
     shift 2
@@ -166,6 +172,11 @@ display_assoc_array() {
   done
 }
 
+pcm_arg=""
+if [[ $pcm_address != "" ]]; then
+  pcm_arg="--pcm ${pcm_address}"
+fi
+
 # Display current configuration
 echo -e "${CYAN}Configuration:${NC}"
 display_assoc_array remote_reflector_listener "Remote reflector listeners"
@@ -199,6 +210,7 @@ function run_d2d_interhost() {
           --run ${test_name} \
           --connect ${remote_reflector_listener[$library]} \
           --flow ${format_file} \
+          ${pcm_arg} \
           --iterations ${nb_iter}"
 
           echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${NC}"

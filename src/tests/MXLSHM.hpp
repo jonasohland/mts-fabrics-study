@@ -193,6 +193,8 @@ namespace riedel::fabricsperf
                 {
                     ctx.startPerfRecorder();
                     ctx.startNvmlPcieRecorder();
+                    // ctx.launchPcmMemoryRecorder();
+                    ctx.launchPcmPcieRecorder();
                 }
 
                 if (index >= 20)

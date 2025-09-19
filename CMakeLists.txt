@@ -29,6 +29,7 @@ find_package(CUDAToolkit REQUIRED)
 add_executable(
     fabrics-perf
     "src/main.cpp"
+    "src/Pcm.cpp"
     "src/Config.cpp"
     "src/Test.cpp"
     "src/Rate.cpp"

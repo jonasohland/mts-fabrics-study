@@ -47,5 +47,4 @@ namespace riedel::fabricsperf
         std::optional<std::thread> _handle;
         std::atomic<bool> _terminate;
     };
-
 }

@@ -149,6 +149,8 @@ namespace riedel::fabricsperf
                 {
                     ctx.startPerfRecorder();
                     ctx.startNvmlPcieRecorder();
+                    ctx.launchPcmPcieRecorder();
+                    // ctx.launchPcmMemoryRecorder();
                     MXL_INFO("warmup complete");
                 }
 

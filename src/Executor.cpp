@@ -42,6 +42,7 @@ namespace riedel::fabricsperf
         Results results;
         PerfCounters counters;
         PcieCounters nvmlCounters;
+        PcmData pcmCounters;
 
         for (auto const& testCase : _config.run)
         {
@@ -57,6 +58,7 @@ namespace riedel::fabricsperf
             results.emplace_back(testCase, dynamic_cast<Runner&>(*_inner).exportResults());
             counters.emplace(testCase, dynamic_cast<Runner&>(*_inner).exportPerfCounters());
             nvmlCounters.emplace(testCase, dynamic_cast<Runner&>(*_inner).exportNvmlPcieCounters());
+            pcmCounters.emplace(testCase, dynamic_cast<Runner&>(*_inner).exportPcmData());
 
             _inner.reset(); // Destroy the previous Runner and all its child when we are done with
                             // them.
@@ -65,6 +67,7 @@ namespace riedel::fabricsperf
         writeResults(_config.output, results);
         writePerfCounters(_config.output, counters);
         writeNvmlPcieCounters(_config.output, nvmlCounters);
+        writePcmData(_config.output, pcmCounters);
     }
 
     void Executor::reflector()
