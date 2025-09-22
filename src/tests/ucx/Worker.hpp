@@ -57,6 +57,7 @@ namespace riedel::fabricsperf
 
     private:
         void postPutOp(uint64_t index);
+        void postSendOp(uint64_t index);
         void postGrainIndexRecv();
         void postGrainIndexSend();
 
@@ -87,6 +88,7 @@ namespace riedel::fabricsperf
         std::string _remoteNameBuffer;
         int _connectionWaitFlags{};
 
+        bool _sendOnly{false};
         bool _useFenceOp{false};
         uint64_t _inFlightGrainIndex{0};
         std::size_t _recvLen;
@@ -94,13 +96,17 @@ namespace riedel::fabricsperf
         ucs_status_t _recvRequestStatus{};
         void* _sendRequest{nullptr};
         ucs_status_t _sendRequestStatus{};
+        void* _indexSendRequest{nullptr};
+        ucs_status_t _indexSendRequestStatus{};
         void* _putRequest{nullptr};
         ucs_status_t _putRequestStatus{};
         void* _disconnectReq{nullptr};
 
         bool _rkeysReady{false};
-        std::vector<LocalRegion> _localRegions;
-        std::vector<RemoteRegion> _remoteRegions;
+        std::vector<std::uint8_t> _recvBuf{};
+        ::ucp_mem_h _recvBufMemH{nullptr};
+        std::vector<LocalRegion> _localRegions{};
+        std::vector<RemoteRegion> _remoteRegions{};
 
         std::string _name;
     };

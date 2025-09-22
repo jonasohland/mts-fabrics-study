@@ -12,7 +12,7 @@
 namespace riedel::fabricsperf
 {
 
-    MXLGrainRegion grainRegion(MXLRegions& mxlRegions, uint64_t index)
+    MXLGrainRegion grainRegion(MXLRegions const& mxlRegions, uint64_t index)
     {
         auto regionGroups = reinterpret_cast<fabrics::RegionGroups*>(mxlRegions.get());
         auto regionGroupsVec = regionGroups->view();
@@ -27,7 +27,7 @@ namespace riedel::fabricsperf
         return {regions[0].base, regions[0].size, regions[0].loc};
     }
 
-    std::vector<MXLGrainRegion> grainRegions(MXLRegions& mxlRegions)
+    std::vector<MXLGrainRegion> grainRegions(MXLRegions const& mxlRegions)
     {
         std::vector<MXLGrainRegion> out{};
         auto regionGroups = reinterpret_cast<fabrics::RegionGroups*>(mxlRegions.get());
