@@ -7,8 +7,8 @@
 #include <ucp/api/ucp_compat.h>
 #include <ucp/api/ucp_def.h>
 #include <ucs/memory/memory_type.h>
+#include "../../Base64.hpp"
 #include "internal/Logging.hpp"
-#include "Base64.hpp"
 #include "Handler.hpp"
 #include "Status.hpp"
 
