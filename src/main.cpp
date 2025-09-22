@@ -128,6 +128,10 @@ int main(int argc, char** argv)
         runner.add<fp::UCX<"UCX+Host2Cuda+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::UCX<"UCX+Host2Cuda+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::UCX<"UCX+Host2Cuda+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
+        runner.add<fp::UCX<"UCX+Cuda2Cuda+OneWay+Wait", fp::TransferMode::OneWay, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_CUDA, MXL_MEMORY_REGION_TYPE_CUDA>>();
         runner.add<fp::UCX<"UCX+Cuda2Host2Host2Cuda+Reflect+Spin", fp::TransferMode::Reflect, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST, fp::ExtraCopyMode::ExtraCopy>>();
         runner.add<fp::UCX<"UCX+Cuda2Host2Host2Cuda+Reflect+Wait", fp::TransferMode::Reflect, fp::PollMode::WAIT, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST, fp::ExtraCopyMode::ExtraCopy>>();
         runner.add<fp::UCX<"UCX+Cuda2Host2Host2Cuda+OneWay+Spin", fp::TransferMode::OneWay, fp::PollMode::SPIN, MXL_MEMORY_REGION_TYPE_HOST, MXL_MEMORY_REGION_TYPE_HOST, fp::ExtraCopyMode::ExtraCopy>>();

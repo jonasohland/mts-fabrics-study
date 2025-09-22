@@ -21,6 +21,7 @@ nb_iter="200"
 formats=(720 1080 2160)
 functions_to_run=("d2d-interhost" "dh2hd-interhost" "h2d-intrahost" "d2h-intrahost" "d2d-intrahost")
 output_root="${project_dir}/output"
+pcm_address=""
 
 # Function to display usage
 usage() {
@@ -52,7 +53,8 @@ OPTIONS:
     IFS=,
     echo "${formats[*]}"
   ))
-    -o --output                                     Output directory (default: $output_root)
+    -p, --pcm                                       PCM Server address
+    -o, --output                                    Output directory (default: $output_root)
     -h, --help                                      Show this help message
 EOF
 }
@@ -119,6 +121,10 @@ while [[ $# -gt 0 ]]; do
     parse_list "$2" formats
     shift 2
     ;;
+  -p | --pcm)
+    pcm_address="$2"
+    shift 2
+    ;;
   -o | --output)
     output_root="$2"
     shift 2
@@ -166,6 +172,11 @@ display_assoc_array() {
   done
 }
 
+pcm_arg=""
+if [[ $pcm_address != "" ]]; then
+  pcm_arg="--pcm ${pcm_address}"
+fi
+
 # Display current configuration
 echo -e "${CYAN}Configuration:${NC}"
 display_assoc_array remote_reflector_listener "Remote reflector listeners"
@@ -177,7 +188,7 @@ display_array formats "Formats"
 echo "  Output Directory:           $output_root"
 echo ""
 
-# Device to Device Inter-Hos
+# Device to Device Inter-Host
 function run_d2d_interhost() {
   echo -e "${CYAN}Starting Device-to-Device Inter-Host transfers${NC}"
 
@@ -185,10 +196,28 @@ function run_d2d_interhost() {
   tests=(Cuda2Cuda)
   libraries=("native" "libfabric")
 
-  for library in "${libraries[@]}"; do
-    for method in "${methods[@]}"; do
-      for format in "${formats[@]}"; do
-        for test in "${tests[@]}"; do
+  for method in "${methods[@]}"; do
+    for format in "${formats[@]}"; do
+      for test in "${tests[@]}"; do
+        # ucx is included in the testcase not in mxl fabrics api
+        test_name="UCX+${test}+Reflect+${method}"
+        format_file="${project_dir}/config/flow-${format}.json"
+        output_dir="${output_root}/d2d-interhost/${format}/ucx"
+        args="--target ${runner_target_address} \
+          --initiator ${runner_initiator_address} \
+          --output ${output_dir} \
+          --gpu ${gpu_id[0]} \
+          --run ${test_name} \
+          --connect ${remote_reflector_listener["libfabric"]} \
+          --flow ${format_file} \
+          ${pcm_arg} \
+          --iterations ${nb_iter}"
+
+        echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener["libfabric"]}\"${NC}"
+
+        "${project_dir}/build/libfabric/fabrics-perf" ${args}
+
+        for library in "${libraries[@]}"; do
           test_name="MXLFabrics+${test}+Verbs+Reflect+${method}"
           format_file="${project_dir}/config/flow-${format}.json"
           output_dir="${output_root}/d2d-interhost/${format}/${library}"
@@ -199,12 +228,14 @@ function run_d2d_interhost() {
           --run ${test_name} \
           --connect ${remote_reflector_listener[$library]} \
           --flow ${format_file} \
+          ${pcm_arg} \
           --iterations ${nb_iter}"
 
           echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${NC}"
 
           "${project_dir}/build/${library}/fabrics-perf" ${args}
         done
+
       done
     done
   done
@@ -218,10 +249,10 @@ function run_dh2hd_interhost() {
   tests=(Cuda2Cuda Cuda2Host2Host2Cuda)
   libraries=("native" "libfabric")
 
-  for library in "${libraries[@]}"; do
-    for method in "${methods[@]}"; do
-      for format in "${formats[@]}"; do
-        for test in "${tests[@]}"; do
+  for method in "${methods[@]}"; do
+    for format in "${formats[@]}"; do
+      for test in "${tests[@]}"; do
+        for library in "${libraries[@]}"; do
           test_name="MXLFabrics+${test}+Verbs+Reflect+${method}"
           format_file="${project_dir}/config/flow-${format}.json"
           output_dir="${output_root}/dh2hd-interhost/${format}/${library}"
@@ -232,12 +263,31 @@ function run_dh2hd_interhost() {
           --run ${test_name} \
           --connect ${remote_reflector_listener[$library]} \
           --flow ${format_file} \
+          ${pcm_arg} \
           --iterations ${nb_iter}"
 
-          echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${NC}"
+          echo -e "${purple}running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${nc}"
 
           "${project_dir}/build/${library}/fabrics-perf" ${args}
         done
+
+        test_name="UCX+${test}+Reflect+${method}"
+        format_file="${project_dir}/config/flow-${format}.json"
+        output_dir="${output_root}/dh2hd-interhost/${format}/ucx"
+        args="--target ${runner_target_address} \
+          --initiator ${runner_initiator_address} \
+          --output ${output_dir} \
+          --gpu ${gpu_id[0]} \
+          --run ${test_name} \
+          --connect ${remote_reflector_listener["libfabric"]} \
+          --flow ${format_file} \
+          ${pcm_arg} \
+          --iterations ${nb_iter}"
+
+        echo -e "${purple}running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener["libfabric"]}\"${nc}"
+
+        "${project_dir}/build/${library}/fabrics-perf" ${args}
+
       done
     done
   done
@@ -251,8 +301,8 @@ function run_h2d_intrahost() {
   for format in "${formats[@]}"; do
     format_file="${project_dir}/config/flow-${format}.json"
 
-    # libfabric
     for method in "${methods[@]}"; do
+      # libfabric
       test_name="MXLFabrics+Host2Cuda+SHM+OneWay+${method}"
       output_dir="${output_root}/h2d-intrahost/${format}/libfabric"
       args="--target ${runner_target_address} \
@@ -262,6 +312,24 @@ function run_h2d_intrahost() {
         --run ${test_name} \
         --connect ${local_reflector_listener["libfabric"]} \
         --flow ${format_file} \
+          ${pcm_arg} \
+        --iterations ${nb_iter}"
+
+      echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
+
+      "${project_dir}/build/libfabric/fabrics-perf" ${args}
+
+      # UCX
+      test_name="UCX+Host2Cuda+OneWay+${method}"
+      output_dir="${output_root}/h2d-intrahost/${format}/ucx"
+      args="--target ${runner_target_address} \
+        --initiator ${runner_initiator_address} \
+        --output ${output_dir} \
+        --gpu ${gpu_id[0]} \
+        --run ${test_name} \
+        --connect ${local_reflector_listener["libfabric"]} \
+        --flow ${format_file} \
+          ${pcm_arg} \
         --iterations ${nb_iter}"
 
       echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
@@ -281,6 +349,7 @@ function run_h2d_intrahost() {
         --run ${test_name} \
         --connect 127.0.0.1:8080 \
         --flow ${format_file} \
+          ${pcm_arg} \
         --iterations ${nb_iter}"
 
     echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\"${NC}"
@@ -296,8 +365,8 @@ function run_d2h_intrahost() {
   for format in "${formats[@]}"; do
     format_file="${project_dir}/config/flow-${format}.json"
 
-    # libfabric
     for method in "${methods[@]}"; do
+      # libfabric
       test_name="MXLFabrics+Cuda2Host+SHM+OneWay+${method}"
       output_dir="${output_root}/d2h-intrahost/${format}/libfabric"
       args="--target ${runner_target_address} \
@@ -307,6 +376,24 @@ function run_d2h_intrahost() {
         --run ${test_name} \
         --connect ${local_reflector_listener["libfabric"]} \
         --flow ${format_file} \
+          ${pcm_arg} \
+        --iterations ${nb_iter}"
+
+      echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
+
+      "${project_dir}/build/libfabric/fabrics-perf" ${args}
+
+      # UCX
+      test_name="UCX+Cuda2Host+OneWay+${method}"
+      output_dir="${output_root}/d2h-intrahost/${format}/ucx"
+      args="--target ${runner_target_address} \
+        --initiator ${runner_initiator_address} \
+        --output ${output_dir} \
+        --gpu ${gpu_id[0]} \
+        --run ${test_name} \
+        --connect ${local_reflector_listener["libfabric"]} \
+        --flow ${format_file} \
+          ${pcm_arg} \
         --iterations ${nb_iter}"
 
       echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
@@ -326,6 +413,7 @@ function run_d2h_intrahost() {
         --run ${test_name} \
         --connect 127.0.0.1:8080 \
         --flow ${format_file} \
+          ${pcm_arg} \
         --iterations ${nb_iter}"
 
     echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\"${NC}"
@@ -342,8 +430,8 @@ function run_d2d_intrahost() {
   for format in "${formats[@]}"; do
     format_file="${project_dir}/config/flow-${format}.json"
 
-    # libfabric
     for method in "${methods[@]}"; do
+      # libfabric
       test_name="MXLFabrics+Cuda2Cuda+SHM+OneWay+${method}"
       output_dir="${output_root}/d2d-intrahost/${format}/libfabric"
       args="--target ${runner_target_address} \
@@ -353,6 +441,24 @@ function run_d2d_intrahost() {
         --run ${test_name} \
         --connect ${local_reflector_listener["libfabric"]} \
         --flow ${format_file} \
+          ${pcm_arg} \
+        --iterations ${nb_iter}"
+
+      echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
+
+      "${project_dir}/build/libfabric/fabrics-perf" ${args}
+
+      # UCX
+      test_name="UCX+Cuda2Cuda+OneWay+${method}"
+      output_dir="${output_root}/d2d-intrahost/${format}/libfabric"
+      args="--target ${runner_target_address} \
+        --initiator ${runner_initiator_address} \
+        --output ${output_dir} \
+        --gpu ${gpu_id[0]} ${gpu_id[1]} \
+        --run ${test_name} \
+        --connect ${local_reflector_listener["libfabric"]} \
+        --flow ${format_file} \
+          ${pcm_arg} \
         --iterations ${nb_iter}"
 
       echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${local_reflector_listener["libfabric"]}\"${NC}"
@@ -372,6 +478,7 @@ function run_d2d_intrahost() {
         --run ${test_name} \
         --connect 127.0.0.1:8080 \
         --flow ${format_file} \
+          ${pcm_arg} \
         --iterations ${nb_iter}"
 
     echo -e "${PURPLE}Running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\"${NC} first gpu id \"${gpu_id[0]}\" second gpu id \"${gpu_id[1]}\""
