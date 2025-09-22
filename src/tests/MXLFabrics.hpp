@@ -14,12 +14,6 @@
 
 namespace riedel::fabricsperf
 {
-    enum class ExtraCopyMode
-    {
-        NoExtraCopy,
-        ExtraCopy
-    };
-
     template<StaticString, TransferMode, PollMode, mxlFabricsProvider, mxlFabricsMemoryRegionType,
         mxlFabricsMemoryRegionType, ExtraCopyMode extraCopy = ExtraCopyMode::NoExtraCopy>
     class MXLFabrics;
@@ -57,7 +51,8 @@ namespace riedel::fabricsperf
         bool needsGPU(TestContext const& ctx) const noexcept
         {
             return (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
-                   (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector());
+                   (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector()) ||
+                   ExtraCopy == ExtraCopyMode::ExtraCopy;
         }
 
         [[nodiscard]]

@@ -13,4 +13,11 @@ namespace riedel::fabricsperf
         Reflect,
         OneWay
     };
+
+    enum class ExtraCopyMode
+    {
+        NoExtraCopy,
+        ExtraCopy
+    };
+
 }

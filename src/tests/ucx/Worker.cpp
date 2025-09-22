@@ -123,6 +123,28 @@ namespace riedel::fabricsperf
         }
 
         _localRegions.emplace_back(LocalRegion{addr, size, memh, params.memory_type, rkey});
+
+        auto recvBufSize = size + sizeof(std::uint64_t);
+
+        // when using send/receive allocate and map a local bounce buffer
+        if (_sendOnly && (_recvBufMemH == nullptr || _recvBuf.size() < recvBufSize))
+        {
+            if (_recvBufMemH != nullptr)
+            {
+                ucx(::ucp_mem_unmap, "unmap receive buffer", _ctx.raw(), _recvBufMemH);
+            }
+
+            _recvBuf.resize(recvBufSize);
+
+            ::ucp_mem_map_params_t params{};
+            params.field_mask = UCP_MEM_MAP_PARAM_FIELD_ADDRESS | UCP_MEM_MAP_PARAM_FIELD_LENGTH |
+                                UCP_MEM_MAP_PARAM_FIELD_PROT;
+            params.address = _recvBuf.data();
+            params.length = _recvBuf.size();
+            params.prot = UCP_MEM_MAP_PROT_LOCAL_WRITE | UCP_MEM_MAP_PROT_LOCAL_READ |
+                          UCP_MEM_MAP_PROT_REMOTE_READ | UCP_MEM_MAP_PROT_REMOTE_WRITE;
+            ucx(::ucp_mem_map, "map local receive buffer", _ctx.raw(), nullptr, &_recvBufMemH);
+        }
     }
 
     void UCPWorker::listen(std::string addr)
@@ -198,27 +220,36 @@ namespace riedel::fabricsperf
 
     void UCPWorker::transferGrain(uint64_t index)
     {
-        if (_sendRequest || _putRequest)
+        if (_sendOnly)
         {
-            throw std::runtime_error("not ready to send another grain");
-        }
-
-        // Noop if already unpacked
-        // This needs to happen here, after writeup is completed, because apparently the rkeys get
-        // invalidated if they get unpacked before the first message is exchanged
-        unpackRKeys();
-
-        // Post the ucx_put_nbx() operation.
-        postPutOp(index);
-
-        if (_useFenceOp || _putRequest == nullptr)
-        {
-            if (_useFenceOp)
+            if (_sendRequest)
             {
-                ucx(::ucp_worker_fence, "ucp_worker_fence", _raw);
+            }
+        }
+        else
+        {
+            if (_sendRequest || _putRequest)
+            {
+                throw std::runtime_error("not ready to send another grain");
             }
 
-            postGrainIndexSend();
+            // Noop if already unpacked
+            // This needs to happen here, after writeup is completed, because apparently the rkeys
+            // get invalidated if they get unpacked before the first message is exchanged
+            unpackRKeys();
+
+            // Post the ucx_put_nbx() operation.
+            postPutOp(index);
+
+            if (_useFenceOp || _putRequest == nullptr)
+            {
+                if (_useFenceOp)
+                {
+                    ucx(::ucp_worker_fence, "ucp_worker_fence", _raw);
+                }
+
+                postGrainIndexSend();
+            }
         }
     }
 
@@ -525,6 +556,26 @@ namespace riedel::fabricsperf
                _connectionWaitFlags || _listener.has_value();
     }
 
+    void UCPWorker::postSendOp(uint64_t index)
+    {
+        _inFlightGrainIndex = index;
+
+        postGrainIndexSend();
+
+        auto& localRegion = _localRegions[index % _localRegions.size()];
+
+        ::ucp_request_param_t params{};
+        params.op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FIELD_MEMORY_TYPE;
+        params.memh = localRegion.handle;
+        params.memory_type = localRegion.memoryType;
+        _sendRequest = ucxReq(::ucp_stream_send_nbx,
+            "ucp stream send",
+            *_endpoint,
+            localRegion.addr,
+            localRegion.size,
+            &params);
+    }
+
     void UCPWorker::postPutOp(uint64_t index)
     {
         MXL_DEBUG("post put: {}", index);
@@ -534,9 +585,11 @@ namespace riedel::fabricsperf
         auto const& remoteRegion = _remoteRegions[index % _remoteRegions.size()];
 
         ::ucp_request_param_t putParams;
-        putParams.op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FIELD_MEMORY_TYPE;
+        putParams.op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FIELD_MEMORY_TYPE |
+                                 UCP_OP_ATTR_FIELD_FLAGS;
         putParams.memh = localRegion.handle;
         putParams.memory_type = localRegion.memoryType;
+        putParams.flags = UCP_OP_ATTR_FLAG_NO_IMM_CMPL | UCP_OP_ATTR_FLAG_MULTI_SEND;
         _putRequest = ucxReq(::ucp_put_nbx,
             "submit grain write op",
             *_endpoint,

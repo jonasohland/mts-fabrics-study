@@ -27,8 +27,8 @@ namespace riedel::fabricsperf
 
     using MXLGrainRegion = std::tuple<std::uintptr_t, std::size_t, fabrics::Region::Location>;
 
-    MXLGrainRegion grainRegion(MXLRegions& regions, uint64_t index);
-    std::vector<MXLGrainRegion> grainRegions(MXLRegions& regions);
+    MXLGrainRegion grainRegion(MXLRegions const& regions, uint64_t index);
+    std::vector<MXLGrainRegion> grainRegions(MXLRegions const& regions);
 
     class FlowSetup
     {
