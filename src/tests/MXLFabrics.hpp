@@ -68,6 +68,12 @@ namespace riedel::fabricsperf
                    TargetLocation == MXL_MEMORY_REGION_TYPE_HOST;
         }
 
+        constexpr bool isD2D() const noexcept
+        {
+            return InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA &&
+                   TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA;
+        }
+
         [[nodiscard]]
         bool needsReflector() const noexcept final
         {
@@ -346,7 +352,8 @@ namespace riedel::fabricsperf
         void run(TestContext& ctx) override
         {
             std::optional<ScopedGPUMaxClocks> gpuClocksLock;
-            if (needsGPU())
+            if ((isH2D() && ctx.reflector()) || (isD2H() && ctx.runner()) || isD2D() ||
+                ExtraCopy == ExtraCopyMode::ExtraCopy)
             {
                 gpuClocksLock = static_cast<int>(ctx.config().gpu.at(0));
             }
