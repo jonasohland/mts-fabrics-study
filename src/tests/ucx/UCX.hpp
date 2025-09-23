@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <cuda_runtime.h>
 #include <system_error>
@@ -11,6 +12,7 @@
 #include "../../Test.hpp"
 #include "../Common.hpp"
 #include "internal/Logging.hpp"
+#include "mxl/fabrics.h"
 #include "Worker.hpp"
 
 namespace riedel::fabricsperf
@@ -45,10 +47,10 @@ namespace riedel::fabricsperf
         }
 
         [[nodiscard]]
-        bool needsGPU(TestContext const& ctx) const noexcept
+        bool needsGPU(TestContext const&) const noexcept
         {
-            return (SrcRegion == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
-                   (DestRegion == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector()) ||
+            return SrcRegion == MXL_MEMORY_REGION_TYPE_CUDA ||
+                   DestRegion == MXL_MEMORY_REGION_TYPE_CUDA ||
                    ExtraCopy == ExtraCopyMode::ExtraCopy;
         }
 
@@ -197,8 +199,17 @@ namespace riedel::fabricsperf
 
         void teardown(TestContext&) final
         {
+            if (_extraCopyBuf)
+            {
+                cudaHostUnregister(_extraCopyBuf);
+                _extraCopyBuf = nullptr;
+            }
+
             _tx.reset();
             _rx.reset();
+
+            _txRegions = std::nullopt;
+            _rxRegions = std::nullopt;
         }
 
         void run(TestContext& ctx) final
@@ -366,6 +377,7 @@ namespace riedel::fabricsperf
                 if (i == 0)
                 {
                     ctx.startPerfRecorder();
+                    ctx.launchPcmPcieRecorder();
                     MXL_INFO("warmup complete");
                 }
 

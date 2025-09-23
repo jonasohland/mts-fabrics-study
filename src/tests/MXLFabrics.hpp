@@ -1,7 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <iterator>
 #include <thread>
+#include <unistd.h>
 #include <cuda_runtime.h>
 #include <mxl/fabrics.h>
 #include "../Defer.hpp"
@@ -48,11 +50,22 @@ namespace riedel::fabricsperf
         constexpr static int numWarmupIterations = 200;
 
         [[nodiscard]]
-        bool needsGPU(TestContext const& ctx) const noexcept
+        bool needsGPU() const noexcept
         {
-            return (TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.runner()) ||
-                   (InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA && ctx.reflector()) ||
-                   ExtraCopy == ExtraCopyMode::ExtraCopy;
+            return TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA ||
+                   InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA;
+        }
+
+        constexpr bool isH2D() const noexcept
+        {
+            return InitiatorLocation == MXL_MEMORY_REGION_TYPE_HOST &&
+                   TargetLocation == MXL_MEMORY_REGION_TYPE_CUDA;
+        }
+
+        constexpr bool isD2H() const noexcept
+        {
+            return InitiatorLocation == MXL_MEMORY_REGION_TYPE_CUDA &&
+                   TargetLocation == MXL_MEMORY_REGION_TYPE_HOST;
         }
 
         [[nodiscard]]
@@ -249,11 +262,15 @@ namespace riedel::fabricsperf
 
             ctx.setLocalTargetInfo(std::string{targetInfoBuf.data(), targetInfoBuf.size() - 1});
 
-            if (needsGPU(ctx) || ExtraCopy == ExtraCopyMode::ExtraCopy)
+            if ((isH2D() && ctx.runner()) || (isD2H() && ctx.reflector()) ||
+                ExtraCopy == ExtraCopyMode::ExtraCopy)
             {
-                auto regions = ctx.flows().getWriterRegions();
-                _localGrainRegions = grainRegions(regions);
-
+                auto readerRegions = grainRegions(ctx.flows().getReaderRegions());
+                auto writerRegions = grainRegions(ctx.flows().getWriterRegions());
+                _localGrainRegions = std::move(readerRegions);
+                _localGrainRegions->insert(_localGrainRegions->end(),
+                    std::make_move_iterator(writerRegions.begin()),
+                    std::make_move_iterator(writerRegions.end()));
                 for (auto const& region : *_localGrainRegions)
                 {
                     auto const& [buf, size, loc] = region;
@@ -264,8 +281,10 @@ namespace riedel::fabricsperf
                     if (auto status = cudaHostRegister(reinterpret_cast<void*>(buf), size, 0);
                         status != cudaSuccess)
                     {
-                        throw std::runtime_error(fmt::format(
-                            "failed to register host grain region: {}", cudaGetErrorName(status)));
+                        MXL_WARN("failed to register host grain region: {}",
+                            cudaGetErrorName(status));
+                        // throw std::runtime_error(fmt::format(
+                        //     "failed to register host grain region: {}", cudaGetErrorName(status)));
                     }
                 }
             }
@@ -327,9 +346,9 @@ namespace riedel::fabricsperf
         void run(TestContext& ctx) override
         {
             std::optional<ScopedGPUMaxClocks> gpuClocksLock;
-            if (needsGPU(ctx))
+            if (needsGPU())
             {
-                gpuClocksLock.emplace(static_cast<int>(ctx.config().gpu.at(0)));
+                gpuClocksLock = static_cast<int>(ctx.config().gpu.at(0));
             }
 
             while (!_remoteEndpointInfo)
@@ -430,6 +449,7 @@ namespace riedel::fabricsperf
                 {
                     MXL_INFO("Warmup complete");
                     ctx.startPerfRecorder();
+                    ctx.launchPcmPcieRecorder();
                 }
 
                 if (i >= 0)

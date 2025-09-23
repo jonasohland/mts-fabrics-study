@@ -39,6 +39,7 @@ add_executable(
     "src/Reflector.cpp"
     "src/Runner.cpp"
     "src/Perf.cpp"
+    "src/Pcm.cpp"
     "src/ScopedGPUMaxClocks.cpp"
     "src/tests/ucx/Context.cpp"
     "src/tests/ucx/Worker.cpp"

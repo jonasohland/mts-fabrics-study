@@ -11,6 +11,11 @@ namespace riedel::fabricsperf
         , _isRunner(config.mode() == Mode::RUNNER)
         , _config(config)
     {
+        if (_config.pcmAddr)
+        {
+            _pcm = Pcm(*config.pcmAddr);
+        }
+
         _perfRecorder.addEvent("context_switches",
             PERF_TYPE_SOFTWARE,
             PERF_COUNT_SW_CONTEXT_SWITCHES,
@@ -116,6 +121,22 @@ namespace riedel::fabricsperf
         _perfRecorder.stop();
     }
 
+    void TestContext::launchPcmPcieRecorder()
+    {
+        if (_pcm)
+        {
+            _pcm->run(PcmMetric::Pcie, _config.iterations);
+        }
+    }
+
+    void TestContext::launchPcmMemoryRecorder()
+    {
+        if (_pcm)
+        {
+            _pcm->run(PcmMetric::Memory, _config.iterations); // TODO: add fps
+        }
+    }
+
     std::vector<std::uint64_t> TestContext::exportTimeRecords() const
     {
         std::vector<std::uint64_t> out(_timeRecords.size());
@@ -159,6 +180,16 @@ namespace riedel::fabricsperf
     std::vector<std::pair<std::string, std::string>> TestContext::exportPerfCounters()
     {
         return _perfRecorder.exportCounters();
+    }
+
+    std::unordered_map<PcmMetric, std::string> TestContext::exportPcmData()
+    {
+        if (_pcm)
+        {
+            return _pcm->exportData();
+        }
+
+        return {};
     }
 
     void TestContext::resetTimers(std::size_t iterations) noexcept

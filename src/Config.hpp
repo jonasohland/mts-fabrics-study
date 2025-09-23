@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,7 @@ namespace riedel::fabricsperf
         std::string domain;
         std::string flow;
         std::size_t iterations;
+        std::optional<std::string> pcmAddr;
 
         Mode mode() const;
         int listenPort() const;
