@@ -7,7 +7,7 @@
     "parents": [],
     "media_type": "video/v210",
     "grain_rate": {
-        "numerator": 30,
+        "numerator": 60,
         "denominator": 1
     },
     "frame_width": 3840,
