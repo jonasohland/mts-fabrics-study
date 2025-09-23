@@ -1,0 +1,4 @@
+Total PCIE Bandwidth (GB/s),Total PCIE Rd Bandwidth (GB/s),Total PCIE Wr Bandwidth (GB/s),Total PCIE Rd Bandwidth Local (GB/s),Total PCIE Wr Bandwidth Local (GB/s),Total PCIE Rd Bandwidth Remote (GB/s),Total PCIE Wr Bandwidth Remote (GB/s)
+0.65,0.32,0.33,0.32,0.33,0.00,0.00
+0.65,0.33,0.32,0.33,0.32,0.00,0.00
+0.27,0.13,0.13,0.13,0.13,0.00,0.00
