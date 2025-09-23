@@ -252,24 +252,6 @@ function run_dh2hd_interhost() {
   for method in "${methods[@]}"; do
     for format in "${formats[@]}"; do
       for test in "${tests[@]}"; do
-        for library in "${libraries[@]}"; do
-          test_name="MXLFabrics+${test}+Verbs+Reflect+${method}"
-          format_file="${project_dir}/config/flow-${format}.json"
-          output_dir="${output_root}/dh2hd-interhost/${format}/${library}"
-          args="--target ${runner_target_address} \
-          --initiator ${runner_initiator_address} \
-          --output ${output_dir} \
-          --gpu ${gpu_id[0]} \
-          --run ${test_name} \
-          --connect ${remote_reflector_listener[$library]} \
-          --flow ${format_file} \
-          ${pcm_arg} \
-          --iterations ${nb_iter}"
-
-          echo -e "${purple}running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${nc}"
-
-          "${project_dir}/build/${library}/fabrics-perf" ${args}
-        done
 
         test_name="UCX+${test}+Reflect+${method}"
         format_file="${project_dir}/config/flow-${format}.json"
@@ -284,10 +266,28 @@ function run_dh2hd_interhost() {
           ${pcm_arg} \
           --iterations ${nb_iter}"
 
-        echo -e "${purple}running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener["libfabric"]}\"${nc}"
+        echo -e "${PURPLE}running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener["libfabric"]}\"${NC}"
 
-        "${project_dir}/build/${library}/fabrics-perf" ${args}
+        "${project_dir}/build/libfabric/fabrics-perf" ${args}
 
+        for library in "${libraries[@]}"; do
+          test_name="MXLFabrics+${test}+Verbs+Reflect+${method}"
+          format_file="${project_dir}/config/flow-${format}.json"
+          output_dir="${output_root}/dh2hd-interhost/${format}/${library}"
+          args="--target ${runner_target_address} \
+          --initiator ${runner_initiator_address} \
+          --output ${output_dir} \
+          --gpu ${gpu_id[0]} \
+          --run ${test_name} \
+          --connect ${remote_reflector_listener[$library]} \
+          --flow ${format_file} \
+          ${pcm_arg} \
+          --iterations ${nb_iter}"
+
+          echo -e "${PURPLE}running test \"${test_name}\" with image format \"${format}\" and output directory \"${output_dir}\" peer \"${remote_reflector_listener[$library]}\"${NC}"
+
+          "${project_dir}/build/${library}/fabrics-perf" ${args}
+        done
       done
     done
   done

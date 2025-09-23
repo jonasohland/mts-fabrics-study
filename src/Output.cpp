@@ -2,6 +2,7 @@
 #include <array>
 #include <filesystem>
 #include <stdexcept>
+#include <fmt/format.h>
 #include "CSV.hpp"
 
 namespace riedel::fabricsperf
@@ -73,6 +74,22 @@ namespace riedel::fabricsperf
         for (auto const& [name, counters] : counters)
         {
             writePerfCounter(directory, name, counters);
+        }
+    }
+
+    void writePcmData(std::string const& directory, PcmData const& counters)
+    {
+        std::filesystem::create_directories(directory);
+
+        for (auto const& [testName, test] : counters)
+        {
+            for (auto const& [pcm, data] : test)
+            {
+                auto fileName = fmt::format("{}/{}.pcm.{}.csv", directory, testName, toString(pcm));
+                std::ofstream ofs{fileName};
+
+                ofs << data;
+            }
         }
     }
 

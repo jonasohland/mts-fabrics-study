@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <optional>
 #include <CLI/CLI.hpp>
 #include <linux/perf_event.h>
 #include <mxl/mxl.h>
@@ -40,6 +41,7 @@ int main(int argc, char** argv)
         .domain = "/dev/shm/mxl",
         .flow = "flow.json",
         .iterations = 2000,
+        .pcmAddr = std::nullopt,
     };
 
     app.add_flag("--runner", config.runner, "Run as the test runner");
@@ -65,6 +67,8 @@ int main(int argc, char** argv)
     app.add_option("-n, --iterations", config.iterations, "Number of test iterations");
     app.add_option("-l, --listen", config.listen, "Address to bind to (implies reflector)");
     app.add_option("-d, --domain", config.domain, "MXL Domain");
+    app.add_option(
+        "-p, --pcm", config.pcmAddr, "Http server address for PCM (Performance Counter Monitor).");
 
     CLI11_PARSE(app, argc, argv);
 
