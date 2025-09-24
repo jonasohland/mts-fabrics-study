@@ -450,7 +450,7 @@ function run_d2d_intrahost() {
 
       # UCX
       test_name="UCX+Cuda2Cuda+OneWay+${method}"
-      output_dir="${output_root}/d2d-intrahost/${format}/libfabric"
+      output_dir="${output_root}/d2d-intrahost/${format}/ucx"
       args="--target ${runner_target_address} \
         --initiator ${runner_initiator_address} \
         --output ${output_dir} \
