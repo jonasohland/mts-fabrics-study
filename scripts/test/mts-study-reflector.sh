@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
     shift 2
     ;;
   -g)
-    gpu_id="$OPTARG"
+    gpu_id="$2"
     shift 2
     ;;
   -h)
@@ -85,6 +85,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "Bind Addr ${bind_addr}"
+echo "GPU ID ${gpu_id}"
 
 native_target="${bind_addr}:${native_target_port}"
 native_initiator="${bind_addr}:${native_initiator_port}"
