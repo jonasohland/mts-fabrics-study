@@ -24,8 +24,6 @@ void signal_handler(int)
 
 int main(int argc, char** argv)
 {
-    ::setenv("UCX_ZCOPY_THRESH", "1", false);
-
     CLI::App app{};
 
     fp::Config config = {
