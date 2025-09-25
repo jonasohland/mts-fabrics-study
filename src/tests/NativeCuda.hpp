@@ -150,13 +150,6 @@ namespace riedel::fabricsperf
             auto rate = ctx.flows().createRateTimer();
             auto index = 0;
 
-            cudaStream_t stream;
-            if (auto status = cudaStreamCreate(&stream); status != cudaSuccess)
-            {
-                throw std::runtime_error(
-                    fmt::format("cudaStreamCreate: {}", cudaGetErrorName(status)));
-            }
-
             for (int i = -20; i < static_cast<int>(ctx.config().iterations); ++i)
             {
                 if (ctx.interrupted())
@@ -179,10 +172,7 @@ namespace riedel::fabricsperf
                 {
                     ctx.timerStart(index);
                 }
-
-                if (auto status = cudaMemcpyAsync(_dst, _src, _size, _kind, stream);
-                    status != cudaSuccess)
-                // if (auto status = cudaMemcpy(_dst, _src, _size, _kind); status != cudaSuccess)
+                if (auto status = cudaMemcpy(_dst, _src, _size, _kind); status != cudaSuccess)
                 {
                     throw std::runtime_error(
                         fmt::format("cudaMemcpy: {}", cudaGetErrorName(status)));
@@ -190,35 +180,27 @@ namespace riedel::fabricsperf
 
                 if (_kind == cudaMemcpyDeviceToDevice)
                 {
-                    if (auto status = cudaStreamSynchronize(stream); status != cudaSuccess)
+                    MXL_INFO("Synchronizing! device {}", ctx.config().gpu.at(0));
+                    if (auto status = cudaSetDevice(ctx.config().gpu.at(0)); status != cudaSuccess)
                     {
-                        throw std::runtime_error(
-                            fmt::format("cudaMemcpy: {}", cudaGetErrorName(status)));
                     }
 
-                    // MXL_INFO("Synchronizing! device {}", ctx.config().gpu.at(0));
-                    // if (auto status = cudaSetDevice(ctx.config().gpu.at(0)); status !=
-                    // cudaSuccess)
-                    // {
-                    // }
-                    //
-                    // if (auto status = cudaDeviceSynchronize(); status != cudaSuccess)
-                    // {
-                    //     throw std::runtime_error(
-                    //         fmt::format("cudaDeviceSynchronize: {}", cudaGetErrorName(status)));
-                    // }
-                    //
-                    // MXL_INFO("Synchronizing! device {}", ctx.config().gpu.at(1));
-                    // if (auto status = cudaSetDevice(ctx.config().gpu.at(1)); status !=
-                    // cudaSuccess)
-                    // {
-                    // }
-                    //
-                    // if (auto status = cudaDeviceSynchronize(); status != cudaSuccess)
-                    // {
-                    //     throw std::runtime_error(
-                    //         fmt::format("cudaDeviceSynchronize: {}", cudaGetErrorName(status)));
-                    // }
+                    if (auto status = cudaDeviceSynchronize(); status != cudaSuccess)
+                    {
+                        throw std::runtime_error(
+                            fmt::format("cudaDeviceSynchronize: {}", cudaGetErrorName(status)));
+                    }
+
+                    MXL_INFO("Synchronizing! device {}", ctx.config().gpu.at(1));
+                    if (auto status = cudaSetDevice(ctx.config().gpu.at(1)); status != cudaSuccess)
+                    {
+                    }
+
+                    if (auto status = cudaDeviceSynchronize(); status != cudaSuccess)
+                    {
+                        throw std::runtime_error(
+                            fmt::format("cudaDeviceSynchronize: {}", cudaGetErrorName(status)));
+                    }
                 }
 
                 if (i >= 0)
@@ -230,8 +212,6 @@ namespace riedel::fabricsperf
             }
 
             ctx.stopPerfRecorder();
-
-            cudaStreamDestroy(stream);
         }
 
         void* _src;
