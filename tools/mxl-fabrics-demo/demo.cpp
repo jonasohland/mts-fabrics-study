@@ -104,7 +104,8 @@ public:
 
     mxlStatus setup(std::string targetInfoStr)
     {
-        std::ifstream file(_config.flowID, std::ios::in | std::ios::binary);
+        auto filePath = _config.domain + "/" + _config.flowID + ".mxl-flow/.json";
+        std::ifstream file(filePath, std::ios::in | std::ios::binary);
         if (!file)
         {
             MXL_ERROR("Failed to open file: '{}'", _config.flowID);
